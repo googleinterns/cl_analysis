@@ -1,6 +1,9 @@
+# CL Analysis Code Repo
+
 **This is not an officially supported Google product.**
 
-## CL Analysis - Intern Project (Summer 2020)
+This git repository is used for CL Analysis - Intern Project (Summer 2020).
+
 
 ## Source Code Headers
 

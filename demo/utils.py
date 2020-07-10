@@ -81,7 +81,7 @@ def save_pull_requests(repo_name, pull_requests):
 
     with open('../data/%s/pull_requests.txt' % (repo_name), 'w') as f:
         for pull_request in pull_requests:
-            f.write(pull_request)
+            f.write(str(pull_request))
             f.write('\n')
 
 def get_pull_request_info(repo_name, pull_request_number):
@@ -97,10 +97,9 @@ def get_pull_request_review_comments(repo_name, pull_request_number):
     json_response = response.json()
     return json_response
 
-"""
-Pull Request Reviews are groups of Pull Request Review Comments on the Pull Request,
-grouped together with a state and optional body comment.
-"""
+
+# Pull Request Reviews are groups of Pull Request Review Comments on the Pull Request,
+# grouped together with a state and optional body comment.
 def get_pull_request_reviews(repo_name, pull_request_number):
     URL = API + "/repos/%s/pulls/%s/reviews" % (repo_name, pull_request_number)
     response = requests.get(url=URL)

@@ -18,10 +18,10 @@ from demo.utils import *
 def main(args):
     if args.all:
         print("Retrieving all pull requests for %s" % (args.repo))
-        pull_requests = get_all_pull_requests(args.repo, args.state)
+        pull_requests = get_all_pull_requests(args.repo, args.state, (args.username, args.token))
     else:
         print("Retrieving pull requests on page %s for %s" % (args.page, args.repo))
-        pull_requests = get_pull_requests_by_page(args.page, args.repo, args.state)
+        pull_requests = get_pull_requests_by_page(args.page, args.repo, args.state, (args.username, args.token))
 
     print("Saving pull requests to file")
     save_pull_requests(args.repo, pull_requests)
@@ -32,5 +32,7 @@ if __name__ == '__main__':
     parser.add_argument('--all', action='store_true')
     parser.add_argument('--page', type=int, default=1)
     parser.add_argument('--state', type=str, default='closed')
+    parser.add_argument('--username', type=str, default='')
+    parser.add_argument('--token', type=str, default='')
     args = parser.parse_args()
     main(args)

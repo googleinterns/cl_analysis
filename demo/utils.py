@@ -82,11 +82,7 @@ def get_pull_requests_by_page(page, repo_name, state='closed', auth=None):
     if not json_response:
         return []
     else:
-        pull_requests_by_page = []
-        for pull_request_info in json_response:
-            pull_request_number = pull_request_info['number']
-            pull_requests_by_page.append(pull_request_number)
-        return pull_requests_by_page
+        return json_response
 
 def save_pull_requests(repo_name, pull_requests):
     if not os.path.exists('../data/%s/' % (repo_name)):

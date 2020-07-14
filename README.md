@@ -4,6 +4,21 @@
 
 This git repository is used for CL Analysis - Intern Project (Summer 2020).
 
+## Code Structure
+
+- cl_analysis
+    - data      # directory of signal data
+        - google # company
+            - automl # repo name
+            - tink
+                - pull_requests_signals.csv # signal csv file
+    - demo      # code for collecting signals
+        - __init__.py
+        - utils.py
+    - docs
+    - LICENSE
+    - README 
+                
 
 ## Source Code Headers
 

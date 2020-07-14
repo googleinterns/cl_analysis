@@ -48,7 +48,7 @@ def collect_signals(args):
 
         reverted_pull_request_number = 0
         pull_request_revert_time = 0
-        if 'revert' in body.lower():
+        if body and 'revert' in body.lower():
             match = re.findall('\#[0-9]+', body)[0]
             reverted_pull_request_number = re.sub('#', '', match)
             reverted_pull_request_info = get_pull_request_info(repo_name, reverted_pull_request_number, auth)

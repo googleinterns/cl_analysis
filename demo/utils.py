@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 from itertools import count
 import os
 
@@ -20,7 +22,13 @@ API = "https://api.github.com"
 
 def send_request(url, params=None, headers=None, auth=None):
     try:
-        response = requests.get(url=url, params=params, headers=headers, auth=auth)
+        session = requests.Session()
+        retry = Retry(connect=3, backoff_factor=0.5)
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+
+        response = session.get(url=url, params=params, headers=headers, auth=auth)
         response.raise_for_status()
         json_response = response.json()
         return json_response

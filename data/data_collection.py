@@ -137,24 +137,22 @@ class DataCollector:
 
         return reverted_pull_request_number, pull_request_revert_time
 
-    def _get_review_comments_body(self, pull_request_number: int) -> List[str]:
+    def _get_review_comments_body(
+            self, pull_request_number: int) -> List[Tuple[str, str]]:
         review_comments = get_pull_request_review_comments(
             self._repo_name, pull_request_number, self._auth)
-        review_comments_msg = self._get_comments_body(review_comments)
+        review_comments_msg = []
+        for comment in review_comments:
+            review_comments_msg.append((comment['path'], comment['body']))
         return review_comments_msg
 
     def _get_issue_comments_body(self, pull_request_number: int) -> List[str]:
         issue_comments = get_pull_request_issue_comments(
             self._repo_name, pull_request_number, self._auth)
-        issue_comments_msg = self._get_comments_body(issue_comments)
+        issue_comments_msg = []
+        for comment in issue_comments:
+            issue_comments_msg.append(comment['body'])
         return issue_comments_msg
-
-    @staticmethod
-    def _get_comments_body(comments: List[dict]) -> List[str]:
-        comments_msg = []
-        for comment in comments:
-            comments_msg.append(comment['body'])
-        return comments_msg
 
     def _get_approved_reviewers(self, pull_request_number: int) -> List[str]:
         reviews = get_pull_request_reviews(

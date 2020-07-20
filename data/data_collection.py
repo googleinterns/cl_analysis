@@ -41,7 +41,7 @@ class DataCollector:
     def set_all(self, find_all: bool) -> None:
         self._find_all = find_all
 
-    def collect_signals(self) -> List:
+    def collect_signals(self) -> None:
         print("Collecting signals for %s" % self._repo_name)
         data = []
         if args.all:
@@ -58,7 +58,7 @@ class DataCollector:
             datum = self._collect_signals_for_one_pull_request(
                 pull_request_info)
             data.append(datum)
-        return data
+        self._save_to_csv(data)
 
     def _collect_signals_for_one_pull_request(
             self, pull_request_info: dict
@@ -119,7 +119,7 @@ class DataCollector:
 
     def _get_reverted_pull_request_info(
             self, pull_request_info: dict) -> Tuple[int, int]:
-        body = pull_request_info['number']
+        body = pull_request_info['body']
         reverted_pull_request_number = 0
         pull_request_revert_time = 0
         pull_request_created_time = to_timestamp(
@@ -214,15 +214,15 @@ class DataCollector:
     def _save_to_csv(self, data):
         print("Saving signals to csv file")
         df = pd.DataFrame(data)
-        # TODO
-        df.columns = ['CL id', '# of original CL', 'CL revert time',
-                      '# of review comments', '# of issue comments',
-                      'files changes info', '# of commits', '# of files',
-                      '# of line changes', 'CL review time',
-                      'CL created time', 'CL closed time',
-                      'check run results', 'comments messages',
-                      '# of approved reviewers', 'approved reviewers',
-                      'contributor']
+        df.columns = ["repo name", "author", "pull request created time",
+                      "pull request closed time", "pull request review time",
+                      "reverted pull request number",
+                      "pull request revert time",
+                      "num review comments", "review comments msg",
+                      "num issue comments", "issue comments msg",
+                      "num approved reviewers", "approved reviewers",
+                      "num commits", "num line changes", "files changes",
+                      "file versions", "check run results"]
         df.to_csv('./%s_pull_requests_signals.csv' % self._repo_name,
                   index=False)
 

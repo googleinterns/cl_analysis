@@ -96,11 +96,11 @@ class DataCollector:
         files_changes, num_line_changes = \
             self._get_file_changes(pull_request_number)
 
-        datum = [self._repo_name, contributor, pull_request_created_time,
-                 pull_request_closed_time, pull_request_review_time,
-                 reverted_pull_request_number, pull_request_revert_time,
-                 num_review_comments, review_comments_msg,
-                 num_issue_comments, issue_comments_msg,
+        datum = [self._repo_name, pull_request_number, contributor,
+                 pull_request_created_time, pull_request_closed_time,
+                 pull_request_review_time, reverted_pull_request_number,
+                 pull_request_revert_time, num_review_comments,
+                 review_comments_msg, num_issue_comments, issue_comments_msg,
                  num_approved_reviewers, approved_reviewers,
                  num_commits, num_line_changes, files_changes,
                  file_versions, check_run_results]
@@ -217,9 +217,10 @@ class DataCollector:
     def _save_to_csv(self, data):
         print("Saving signals to csv file")
         df = pd.DataFrame(data)
-        df.columns = ["repo name", "author", "pull request created time",
-                      "pull request closed time", "pull request review time",
-                      "reverted pull request number",
+        df.columns = ["repo name", "pull request id", "author",
+                      "pull request created time", "pull request closed time",
+                      "pull request review time",
+                      "reverted pull request id",
                       "pull request revert time",
                       "num review comments", "review comments msg",
                       "num issue comments", "issue comments msg",

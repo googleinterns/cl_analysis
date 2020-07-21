@@ -173,23 +173,28 @@ class DataCollector:
             for commit_file in commit_files:
                 commit_file_name = commit_file['filename']
                 file_versions_dict[commit_file_name] += 1
-        return file_versions_dict
+        return dict(file_versions_dict)
 
     def _get_check_run_results(
-            self, commits: List[dict]) -> List[Tuple[int, int]]:
+            self, commits: List[dict]) -> List[str]:
+        failed_status = {'failure, cancelled, timed_out, action_required'}
         check_run_results = []
         for commit in commits:
             commit_ref = commit['sha']
-            num_success = 0
             commit_check_run_results = get_commit_check_runs(
                 self._repo_name, commit_ref, self._auth)
             num_check_runs = commit_check_run_results['total_count']
+            if num_check_runs == 0:
+                check_run_results.append('none')
+                continue
+            status = 'passed'
             for commit_check_run_result in commit_check_run_results[
                     'check_runs']:
                 conclusion = commit_check_run_result['conclusion']
-                if conclusion == 'success':
-                    num_success += 1
-            check_run_results.append((num_check_runs, num_success))
+                if conclusion in failed_status:
+                    status = 'failed'
+                    break
+            check_run_results.append(status)
         return check_run_results
 
     def _get_file_changes(

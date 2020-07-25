@@ -21,11 +21,36 @@ from typing import Tuple
 
 
 class DataCollector:
+    """Class that collects pull request level signals.
 
+    This class takes a repository name, optional authentication token,
+    a boolean variable that indicates if collecting all of the pull
+    requests or not, and a page number. If the find_all is set to True, then
+    the DataCollector will collect the signals of all pull requests and
+    ignore the page number.
+
+    Attributes:
+        _repo_name: A str of repository name.
+        _auth: A tuple of username, token.
+        _find_all: A boolean indicating if collecting all of the pull
+            requests or not.
+        _page: An integer page number indicating which page the GitHub API
+            should retrieve.
+    """
     def __init__(self, repo_name: str,
                  auth: Tuple[str, str] = None,
                  find_all: bool = False,
                  page: int = 1) -> None:
+        """Inits the DataCollector with given parameters
+
+        Args:
+            repo_name: A str of repository name.
+            auth: A tuple of username, token.
+            find_all: A boolean indicating if collecting all of the pull
+                requests or not.
+            page: An integer indicating which page the GitHub API
+                should retrieve.
+        """
         self._repo_name = repo_name
         self._auth = auth
         self._find_all = find_all
@@ -34,14 +59,31 @@ class DataCollector:
         self._page = page
 
     def set_page(self, page: int) -> None:
+        """Sets the new page number.
+
+        Args:
+            page: A integer page number.
+        Returns: None.
+        """
         if page < 1:
             raise ValueError('page must be at least 1, not %s.' % page)
         self._page = page
 
     def set_all(self, find_all: bool) -> None:
+        """Setss the find_all boolean.
+
+        Args:
+            find_all: A boolean indicating if collecting all of the pull
+                requests or not.
+        Returns: None.
+        """
         self._find_all = find_all
 
     def collect_signals(self) -> None:
+        """Collects pull request signals and save to CSV file.
+
+        Returns: None
+        """
         print("Collecting signals for %s" % self._repo_name)
         data = []
         if args.all:
@@ -63,6 +105,13 @@ class DataCollector:
     def _collect_signals_for_one_pull_request(
             self, pull_request_info: dict
     ) -> List:
+        """Collects the signals given pull request information dict.
+
+        Args:
+            pull_request_info: A dict of pull request information.
+        Returns:
+            A list of values which are the signals for one pull request.
+        """
         contributor = pull_request_info['user']['login']
         pull_request_number = pull_request_info['number']
         print("Collecting signals for pull request number %s"
@@ -109,6 +158,14 @@ class DataCollector:
     @staticmethod
     def _get_pull_request_review_time(
             pull_request_info: dict) -> Tuple[float, float, float]:
+        """Computes the total review time of a pull request.
+
+        Args:
+            pull_request_info: A dict of a pull request information.
+        Returns:
+            A tuple of three float numbers: pull request created time,
+            pull request closed time, and pull request review time.
+        """
         pull_request_created_time = to_timestamp(
             pull_request_info['created_at'])
         pull_request_closed_time = to_timestamp(pull_request_info['closed_at'])
@@ -119,6 +176,15 @@ class DataCollector:
 
     def _get_reverted_pull_request_info(
             self, pull_request_info: dict) -> Tuple[int, int]:
+        """Retrieves the original pull request of the reverted pull request.
+
+        Args:
+            pull_request_info: A dict of a pull request information.
+        Returns:
+            A tuple of two integers indicating the original pull request id,
+            and the revert time between the reverted pull request and the
+            original pull request.
+        """
         body = pull_request_info['body']
         reverted_pull_request_number = 0
         pull_request_revert_time = 0
@@ -139,6 +205,14 @@ class DataCollector:
 
     def _get_review_comments_body(
             self, pull_request_number: int) -> List[Tuple[str, str]]:
+        """Retrieves the review comments of a given pull request id.
+
+        Args:
+            pull_request_number: An integer of pull request id.
+        Returns:
+            A list of tuples. Each tuple consists of two strs: a file path,
+            and a review comment message.
+        """
         review_comments = get_pull_request_review_comments(
             self._repo_name, pull_request_number, self._auth)
         review_comments_msg = []
@@ -147,6 +221,13 @@ class DataCollector:
         return review_comments_msg
 
     def _get_issue_comments_body(self, pull_request_number: int) -> List[str]:
+        """Retrieves the issue comments of a given pull request id.
+
+        Args:
+            pull_request_number: An integer of pull request id.
+        Returns:
+            A list of strs. Each str is an issue comment.
+        """
         issue_comments = get_pull_request_issue_comments(
             self._repo_name, pull_request_number, self._auth)
         issue_comments_msg = []
@@ -155,6 +236,13 @@ class DataCollector:
         return issue_comments_msg
 
     def _get_approved_reviewers(self, pull_request_number: int) -> List[str]:
+        """Retrieves the approved reviewers of a given pull request id.
+
+        Args:
+            pull_request_number: An integer of pull request id.
+        Returns:
+            A list of strs. Each str is an approved reviewer login username.
+        """
         reviews = get_pull_request_reviews(
             self._repo_name, pull_request_number, self._auth)
         approved_reviewers = set()
@@ -164,6 +252,17 @@ class DataCollector:
         return list(approved_reviewers)
 
     def _get_file_versions(self, commits: List[dict]) -> dict:
+        """Retrieves the file versions of a list of commits.
+
+        This function takes a list of commit information dicts and aggregates
+        the number of file versions by each file path.
+
+        Args:
+            commits: A list of dicts. Each dict is a commit information dict.
+        Returns:
+            A dict of file versions. The keys are the file path and the values
+            are the number of file versions.
+        """
         file_versions_dict = defaultdict(int)
         for commit in commits:
             commit_ref = commit['sha']
@@ -177,6 +276,14 @@ class DataCollector:
 
     def _get_check_run_results(
             self, commits: List[dict]) -> List[str]:
+        """Retrieves the check run results given a list of commit dicts.
+
+        Args:
+            commits: A list of dicts. Each dict is a commit information.
+        Returns:
+            A list of strs. Each str stands for the final check run status.
+            The status can be 'none', 'passed', 'failed'.
+        """
         failed_status = {'failure, cancelled, timed_out, action_required'}
         check_run_results = []
         for commit in commits:
@@ -200,6 +307,19 @@ class DataCollector:
     def _get_file_changes(
             self, pull_request_number: int
     ) -> Tuple[List[Tuple[str, int, int, int]], int]:
+        """Retrieves the file changes information given a pull request id.
+
+        This functions retrieves the line changes for each file path and the
+        total number of line changes of a certain pull request.
+
+        Args:
+            pull_request_number: An integer of pull request id.
+        Returns:
+            A tuple of a list and integer. The list is a list of tuple. Each
+            tuple contains a str and three integers, indicating the file path,
+            number of additions, number of deletions, number of line changes.
+            The integer is the total number of line changes.
+        """
         files = get_pull_request_files(
             self._repo_name, pull_request_number, self._auth)
         files_changes = []
@@ -214,7 +334,15 @@ class DataCollector:
                                   num_changes))
         return files_changes, num_line_changes
 
-    def _save_to_csv(self, data):
+    def _save_to_csv(self, data) -> None:
+        """Transforms a list of lists to a pandas DataFrame and save to CSV.
+
+        Args:
+            data: A list of lists. Each single list is a piece of datum,
+            containing the signals of a pull request. This whole list contains
+            the signals of all pull requests.
+        Returns: None.
+        """
         print("Saving signals to csv file")
         df = pd.DataFrame(data)
         df.columns = ["repo name", "pull request id", "author",
@@ -232,6 +360,11 @@ class DataCollector:
 
 
 def main(arguments):
+    """
+    This is the main function. It creates a DataCollector object given
+    provided repository name, username, token, all which is a boolean
+    indicating if collecting all of the pull requests, and a page.
+    """
     auth = (arguments.username, arguments.token)
     data_collector = DataCollector(arguments.repo, auth,
                                    arguments.all, arguments.page)

@@ -15,137 +15,247 @@
 import argparse
 from collections import defaultdict
 import pandas as pd
+from typing import List, Tuple
 
 
 class FileData:
+    """Class that holds the file level signals.
+
+    This class contains all of the file level signals for one file.
+    The file name and repository name are stored in the string and
+    the rest of the signals are stored in the dictionary.
+
+    Attributes:
+        file_name: A str of the file name.
+        repo_name: A str of the repository name the file belongs to.
+        data: A dict that holds the file level signals.
+    """
     def __init__(self) -> None:
+        """Init FileData."""
         self.file_name = None
         self.repo_name = None
         self.data = defaultdict(list)
 
     def __repr__(self) -> str:
+        """Return the str representation of FileData.
+
+        Returns:
+            A str representation of data dict.
+        """
         return str(self.data)
 
 
 class DataAggregator:
+    """Class that takes in a CSV file and aggregate the signals on file level.
+
+    This class takes in pull request signals and aggregate them based on file.
+    The operations are done by putting the pull request level signals into
+    a list for each file involved in a certain pull request.
+
+    Attributes:
+        _pr_level_data: A pandas DataFrame that contains the pull request level
+            signals.
+        _pr_level_columns: A dict that holds the pull request level signals
+            columns, the keys are the column names and the values are the
+            functions to convert the str to corresponding types.
+        _file_level_columns: A dict that holds the file level signals columns.
+        _file_level_data: A dict that holds the file level signals.
+    """
     def __init__(self, file: str) -> None:
-        self._data = pd.read_csv(file)
+        """Inits DataAggregator with the CSV file name.
 
-    def aggregate(self) -> dict:
-        print("Aggregating pull request data to file level")
-        file_level_data = defaultdict(FileData)
-        for idx in range(len(self._data)):
-            repo_name = self._data.iloc[idx]['repo name']
-            author = self._data.iloc[idx]['author']
-            pull_request_id = int(self._data.iloc[idx]['pull request id'])
-            pull_request_created_time = float(
-                self._data.iloc[idx]['pull request created time'])
-            pull_request_closed_time = float(
-                self._data.iloc[idx]['pull request closed time'])
-            pull_request_review_time = float(
-                self._data.iloc[idx]['pull request review time'])
-            reverted_pull_request_id = int(
-                self._data.iloc[idx]['reverted pull request id'])
-            pull_request_revert_time = float(
-                self._data.iloc[idx]['pull request revert time'])
-            num_review_comments = \
-                int(self._data.iloc[idx]['num review comments'])
-            review_comments_msg = \
-                eval(self._data.iloc[idx]['review comments msg'])
-            num_issue_comments = int(self._data.iloc[idx]['num issue comments'])
-            issue_comments_msg = \
-                eval(self._data.iloc[idx]['issue comments msg'])
-            num_approved_reviewers = \
-                int(self._data.iloc[idx]['num approved reviewers'])
-            approved_reviewers = \
-                eval(self._data.iloc[idx]['approved reviewers'])
-            num_commits = int(self._data.iloc[idx]['num commits'])
-            num_line_changes = int(self._data.iloc[idx]['num line changes'])
-            file_changes = eval(self._data.iloc[idx]['files changes'])
-            file_versions = eval(self._data.iloc[idx]['file versions'])
-            check_run_results = eval(self._data.iloc[idx]['check run results'])
+        Args:
+            file: The file path of pull request level CSV file.
+        """
 
+        self._pr_level_data = pd.read_csv(file)
+        self._pr_level_columns = {
+            'author': str, 'pull request id': int,
+            'pull request created time': float,
+            'pull request closed time': float,
+            'pull request review time': float,
+            'reverted pull request id': int,
+            'pull request revert time': float,
+            'num review comments': int,
+            'num issue comments': int, 'issue comments msg': eval,
+            'num approved reviewers': int,
+            'approved reviewers': eval, 'num commits': int,
+            'num line changes': int
+            }
+        self._file_level_columns = {
+            'files changes': eval,
+            'file versions': eval,
+            'review comments msg': eval
+            }
+        self._file_level_data = defaultdict(FileData)
+
+    def aggregate(self) -> None:
+        """Aggregate the pull request level signals to file level.
+
+        This function aggregates the pull request level signals for each file by
+        adding them to a list. Each column is a kind of signal. For a certain
+        signal of a file that is involved in multiple pull requests,
+        a list of signals from multiple pull requests is maintained.
+
+        Returns: None
+        """
+        print("Aggregating pull request signals to file level")
+        for idx in range(len(self._pr_level_data)):
+            datum = self._pr_level_data.iloc[idx]
+            repo_name = str(datum['repo name'])
+            check_run_results = eval(datum['check run results'])
+            pr_level_values, file_level_values = self._get_value_dict(datum)
+            file_versions = file_level_values['file versions']
             file_names = file_versions.keys()
-            for file_name in file_names:
-                if not file_level_data[file_name].file_name:
-                    file_level_data[file_name].file_name = file_name
 
-                if not file_level_data[file_name].repo_name:
-                    file_level_data[file_name].repo_name = repo_name
+            self._aggregate_pr_level_signals(
+                pr_level_values, file_names, repo_name, check_run_results)
+            self._aggregate_file_level_signals(file_level_values, file_versions)
+        self._file_level_data = dict(self._file_level_data)
 
-                file_level_data[file_name].data['authors'].append(author)
-                file_level_data[file_name].data['pr ids'].append(
-                    pull_request_id)
-                file_level_data[file_name].data['pr created times'].append(
-                    pull_request_created_time)
-                file_level_data[file_name].data['pr closed times'].append(
-                    pull_request_closed_time)
-                file_level_data[file_name].data['pr review times'].append(
-                    pull_request_review_time)
+    def _get_value_dict(self, datum: pd.Series) -> Tuple[dict, dict]:
+        """Build the file level values dict and pull request level dict.
 
-                if reverted_pull_request_id != 0:
-                    file_level_data[file_name].data['reverted pr ids'].append(
-                        reverted_pull_request_id)
+        This function takes in a panda Series and returns the pull request
+        level values dict and the file level values dict
 
-                if pull_request_revert_time != 0:
-                    file_level_data[file_name].data['pr revert times'].append(
-                        pull_request_revert_time)
+        Args:
+            datum: A pandas Series that holds a piece of datum of
+                pull request level signal.
 
-                file_level_data[file_name].data['num review comments'].append(
-                    num_review_comments)
-                file_level_data[file_name].data['pr num issue comments'].append(
-                    num_issue_comments)
-                file_level_data[file_name].data[
-                    'pr issue comments msgs'].extend(issue_comments_msg)
-                file_level_data[file_name].data[
-                    'pr num approved reviewers'].append(num_approved_reviewers)
-                file_level_data[file_name].data['pr approved reviewers'].extend(
-                    approved_reviewers)
-                file_level_data[file_name].data['pr num commits'].append(
-                    num_commits)
-                file_level_data[file_name].data['pr num line changes'].append(
-                    num_line_changes)
+        Returns:
+            A tuple of two dicts, the pull request level signals values and
+            the file level signals values.
+        """
+        pr_level_values = {}
+        for column in self._pr_level_columns:
+            pr_level_values[column] = \
+                self._pr_level_columns[column](datum[column])
 
-                num_passed = 0
-                num_failed = 0
-                for check_run_result in check_run_results:
-                    if check_run_result == 'passed':
-                        num_passed += 1
-                    if check_run_result == 'failed':
-                        num_failed += 1
-                file_level_data[file_name].data['pr check run results'].append(
-                    (num_passed, num_failed))
+        file_level_values = {}
+        for column in self._file_level_columns:
+            file_level_values[column] = \
+                self._file_level_columns[column](datum[column])
+        return pr_level_values, file_level_values
 
-            for file_name, version in file_versions.items():
-                file_level_data[file_name].data['file versions'].append(version)
+    def _aggregate_file_level_signals(
+            self, file_level_values: dict, file_versions: dict) -> None:
+        """Aggregate the signals of file level columns.
 
-            for file_change in file_changes:
-                file_name, addition, deletion, changes = file_change
-                file_level_data[file_name].data['files changes'].append(
-                    (addition, deletion, changes))
+        This function takes a file level signals values dict and a file versions
+        dict, and aggregates the signals that are on file level.
 
-            for review_msg in review_comments_msg:
-                file_name, msg = review_msg
-                file_level_data[file_name].data['review comments'].append(msg)
+        Args:
+            file_level_values: A file level signals values dict, keys are the
+                columns and the values are the corresponding values.
+            file_versions: A file versions dict, keys are the file names and
+                the values are the number of file versions.
 
-        return dict(file_level_data)
+        Returns: None
+        """
+        for file_name, version in file_versions.items():
+            self._file_level_data[file_name].data['file versions'] \
+                .append(version)
+
+        file_changes = file_level_values['files changes']
+        for file_change in file_changes:
+            file_name, addition, deletion, changes = file_change
+            self._file_level_data[file_name].data['files changes'].append(
+                (addition, deletion, changes))
+
+        review_comments_msg = file_level_values['review comments msg']
+        for review_msg in review_comments_msg:
+            file_name, msg = review_msg
+            self._file_level_data[file_name].data['review comments msg'] \
+                .append(msg)
+
+    def _aggregate_pr_level_signals(
+            self, pr_level_values: dict,
+            file_names: List[str], repo_name: str,
+            check_run_results: List[str]
+    ) -> None:
+        """Aggregate the signals of pull request level columns.
+
+        This function takes the pull request level values dict, a list of
+        file names, repository name, and a list of check run results.
+        It aggregates the signals that are on pull request level.
+
+        Args:
+            pr_level_values: A dict that holds the pull request level signal
+                values. The keys are the pull request level signals columns,
+                and the values are the pull request level signals values.
+            file_names: A list of file names.
+            repo_name: A str of repository name.
+            check_run_results: A list of check run result status.
+                Example: ['none', 'passed', 'failed'].
+        Returns: None
+        """
+        for file_name in file_names:
+            if not self._file_level_data[file_name].file_name:
+                self._file_level_data[file_name].file_name = file_name
+
+            if not self._file_level_data[file_name].repo_name:
+                self._file_level_data[file_name].repo_name = repo_name
+
+            for column in self._pr_level_columns:
+                value = pr_level_values[column]
+                if type(value) is list:
+                    self._file_level_data[file_name].data[column].extend(value)
+                else:
+                    self._file_level_data[file_name].data[column].append(value)
+
+            num_passed, num_failed = \
+                self._count_check_run_status(check_run_results)
+            self._file_level_data[file_name].data['check run results'].append(
+                (num_passed, num_failed))
 
     @staticmethod
-    def to_df(file_level_data) -> pd.DataFrame:
-        print("Transform file level data to data frame")
+    def _count_check_run_status(
+            check_run_results: List[str]) -> Tuple[int, int]:
+        """Computes the number of passed and failed check run status.
+
+        Args:
+            check_run_results: A list of check run result status.
+        Returns:
+            A tuple of two integers, the first integer stands for the
+            number of passed check runs and the second stands for the number
+            of failed check runs.
+        """
+        num_passed = 0
+        num_failed = 0
+        for check_run_result in check_run_results:
+            if check_run_result == 'passed':
+                num_passed += 1
+            if check_run_result == 'failed':
+                num_failed += 1
+        return num_passed, num_failed
+
+    def to_df(self) -> pd.DataFrame:
+        """Transforms the file level signals dict to pandas DataFrame.
+
+        Returns:
+            A pandas DataFrame that holds the file level signals.
+        """
+        print("Transform file level signals to data frame")
         series = []
-        for file_name in file_level_data:
-            datum = pd.Series(file_level_data[file_name].data)
+        for file_name in self._file_level_data:
+            datum = pd.Series(self._file_level_data[file_name].data)
             datum['file name'] = file_name
-            datum['repo name'] = file_level_data[file_name].repo_name
+            datum['repo name'] = self._file_level_data[file_name].repo_name
             series.append(datum)
         return pd.DataFrame(series)
 
 
 def main(arguments):
+    """
+    The main function which creates a DataAggregator given the file path
+    of the CSV file of the pull request level signals and aggregates the
+    signals for each file path and transforms to pandas DataFrame and
+    save to another CSV file. 
+    """
     data_aggregator = DataAggregator(arguments.filename)
-    file_level_data = data_aggregator.aggregate()
-    df = data_aggregator.to_df(file_level_data)
+    data_aggregator.aggregate()
+    df = data_aggregator.to_df()
     print("Saving file level signals")
     df.to_csv('./%s_file_level_signals.csv' % arguments.repo)
 

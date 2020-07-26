@@ -70,7 +70,7 @@ class DataCollector:
         self._page = page
 
     def set_all(self, find_all: bool) -> None:
-        """Setss the find_all boolean.
+        """Sets the find_all boolean.
 
         Args:
             find_all: A boolean indicating if collecting all of the pull

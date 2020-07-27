@@ -18,6 +18,7 @@ from typing import Tuple, List, Union
 import requests
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+import logging
 
 
 def send_request(url: str,
@@ -36,6 +37,10 @@ def send_request(url: str,
         the actual returned response. Or None, if an error occurred.
     """
     try:
+        logging.basicConfig(format='%(asctime)s,%(msecs)d %(levelname)-8s '
+                                   '[%(filename)s:%(lineno)d] %(message)s',
+                            datefmt='%Y-%m-%d:%H:%M:%S',level=logging.INFO)
+
         session = requests.Session()
         retry = Retry(connect=5, backoff_factor=0.5)
         adapter = HTTPAdapter(max_retries=retry)
@@ -48,13 +53,13 @@ def send_request(url: str,
         json_response = response.json()
         return json_response
     except requests.exceptions.HTTPError as http_error:
-        print("Http Error:", http_error)
+        logging.error("Http Error:", http_error)
     except requests.exceptions.ConnectionError as connection_error:
-        print("Error Connecting:", connection_error)
+        logging.error("Error Connecting:", connection_error)
     except requests.exceptions.Timeout as timeout_error:
-        print("Timeout Error:", timeout_error)
+        logging.error("Timeout Error:", timeout_error)
     except requests.exceptions.RequestException as request_exception:
-        print("Request Exception:", request_exception)
+        logging.error("Request Exception:", request_exception)
 
 
 def get_all_repositories(

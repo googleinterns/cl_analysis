@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from itertools import count
-import datetime
+from datetime import datetime
 from typing import Tuple, List, Union
 import requests
 from requests.adapters import HTTPAdapter
@@ -54,12 +54,16 @@ def send_request(url: str,
         return json_response
     except requests.exceptions.HTTPError as http_error:
         logging.error("Http Error:", http_error)
+        raise SystemExit(http_error)
     except requests.exceptions.ConnectionError as connection_error:
         logging.error("Error Connecting:", connection_error)
+        raise SystemExit(connection_error)
     except requests.exceptions.Timeout as timeout_error:
         logging.error("Timeout Error:", timeout_error)
+        raise SystemExit(timeout_error)
     except requests.exceptions.RequestException as request_exception:
         logging.error("Request Exception:", request_exception)
+        raise SystemExit(request_exception)
 
 
 def get_all_repositories(
@@ -93,7 +97,7 @@ def get_repositories_by_page(
         A list of repository names.
     """
     url = "https://api.github.com/users/%s/repos" % username
-    query_parameters = {'page': page}
+    query_parameters = {'page': page, 'per_page': 100}
     json_response = send_request(url=url, params=query_parameters, auth=auth)
     if not json_response:
         return []
@@ -119,6 +123,8 @@ def save_repositories(username: str, repo_names: List[str]) -> None:
 
 
 def get_all_pull_requests(repo_name: str,
+                          start_date: str,
+                          end_date: str,
                           state: str = 'closed',
                           auth: Tuple[str, str] = None) -> List[dict]:
     """Retrieves a complete list of pull requests information by repository
@@ -126,6 +132,8 @@ def get_all_pull_requests(repo_name: str,
 
     Args:
         repo_name: A str of repository name.
+        start_date: A str of earliest date to retrieve.
+        end_date: A str of latest date to retrieve.
         state: A str of pull request state. Values can be 'open' or 'closed'.
         auth: A tuple of username, token.
     Returns:
@@ -134,7 +142,7 @@ def get_all_pull_requests(repo_name: str,
     pull_requests = []
     for page in count(1):
         pull_requests_by_page = get_pull_requests_by_page(
-            page, repo_name, state, auth)
+            page, repo_name, start_date, end_date, state, auth)
         if not pull_requests_by_page:
             break
         pull_requests.extend(pull_requests_by_page)
@@ -143,24 +151,35 @@ def get_all_pull_requests(repo_name: str,
 
 def get_pull_requests_by_page(page: int,
                               repo_name: str,
+                              start_date: str,
+                              end_date: str,
                               state: str = 'closed',
-                              auth: Tuple[str, str] = None) -> List[dict]:
+                              auth: Tuple[str, str] = None
+                              ) -> List[dict]:
     """Retrieves a list of pull requests information on a certain page.
 
     Args:
         page: An integer indicating which page to retrieve.
         repo_name: A str of repository name.
+        start_date: A str of earliest date to retrieve.
+        end_date: A str of latest date to retrieve.
         state: A str of pull request state. Values can be 'open' or 'closed'.
         auth: A tuple of username, token.
     Returns:
         A list of dicts. Each dict holds a pull request information.
     """
     url = "https://api.github.com/repos/%s/pulls" % repo_name
-    query_parameters = {'page': page, 'state': state}
+    query_parameters = {'page': page, 'state': state, 'per_page': 100}
     json_response = send_request(url=url, params=query_parameters, auth=auth)
     if not json_response:
         return []
-    return json_response
+    pull_request_info_list = []
+    for pull_request_info in json_response:
+        close_time = pull_request_info['closed_at']
+        if to_timestamp(start_date) <= to_timestamp(close_time) \
+                <= to_timestamp(end_date):
+            pull_request_info_list.append(pull_request_info)
+    return pull_request_info_list
 
 
 def save_pull_requests(repo_name: str, pull_requests: List[dict]) -> None:
@@ -358,7 +377,4 @@ def to_timestamp(time_str: str) -> float:
     Returns:
          A float of timestamp.
     """
-    date, time = time_str[:-1].split('T')
-    year, month, day = map(int, date.split('-'))
-    hour, minute, second = map(int, time.split(':'))
-    return datetime.datetime(year, month, day, hour, minute, second).timestamp()
+    return datetime.fromisoformat(time_str[:-1]).timestamp()

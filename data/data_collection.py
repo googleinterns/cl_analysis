@@ -17,7 +17,6 @@ import re
 import csv
 import os
 from collections import defaultdict
-import pandas as pd
 from typing import Tuple
 
 

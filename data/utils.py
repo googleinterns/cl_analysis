@@ -39,7 +39,7 @@ def send_request(url: str,
     try:
         logging.basicConfig(format='%(asctime)s,%(msecs)d %(levelname)-8s '
                                    '[%(filename)s:%(lineno)d] %(message)s',
-                            datefmt='%Y-%m-%d:%H:%M:%S',level=logging.INFO)
+                            datefmt='%Y-%m-%d:%H:%M:%S', level=logging.INFO)
 
         session = requests.Session()
         retry = Retry(connect=10, backoff_factor=5)
@@ -155,7 +155,7 @@ def get_pull_requests_by_page(page: int,
                               end_date: str,
                               state: str = 'closed',
                               auth: Tuple[str, str] = None
-                              ) -> Union[List[dict], None]:
+) -> Union[List[dict], None]:
     """Retrieves a list of pull requests information on a certain page.
 
     Args:
@@ -200,7 +200,7 @@ def save_pull_requests(repo_name: str, pull_requests: List[dict]) -> None:
 
 def get_pull_request_info(repo_name: str,
                           pull_request_number: int,
-                          auth: Tuple[str, str] = None) -> dict:
+                          auth: Tuple[str, str] = None) -> Union[dict, None]:
     """Retrieves pull request information.
 
     Retrieves pull request information of given repository name, pull request
@@ -221,7 +221,7 @@ def get_pull_request_info(repo_name: str,
 def get_pull_request_review_comments(repo_name: str,
                                      pull_request_number: int,
                                      auth: Tuple[str, str] = None
-                                     ) -> List[dict]:
+) -> Union[List[dict], None]:
     """Retrieves a list of pull request review comments.
 
     Pull request review comments are comments on a portion of the unified diff
@@ -242,7 +242,8 @@ def get_pull_request_review_comments(repo_name: str,
 
 def get_pull_request_reviews(repo_name: str,
                              pull_request_number: int,
-                             auth: Tuple[str, str] = None) -> List[dict]:
+                             auth: Tuple[str, str] = None
+) -> Union[List[dict], None]:
     """Retrieves a list of pull request review information.
 
     Pull Request Reviews are groups of Pull Request Review Comments on the Pull
@@ -262,7 +263,8 @@ def get_pull_request_reviews(repo_name: str,
 
 def get_pull_request_commits(repo_name: str,
                              pull_request_number: int,
-                             auth: Tuple[str, str] = None) -> List[dict]:
+                             auth: Tuple[str, str] = None
+) -> Union[List[dict], None]:
     """Retrieves a list of pull request commits information.
 
     Args:
@@ -279,7 +281,8 @@ def get_pull_request_commits(repo_name: str,
 
 def get_pull_request_files(repo_name: str,
                            pull_request_number: int,
-                           auth: Tuple[str, str] = None) -> List[dict]:
+                           auth: Tuple[str, str] = None
+) -> Union[List[dict], None]:
     url = "https://api.github.com/repos/%s/pulls/%s/files" % (
         repo_name, pull_request_number)
     return send_request(url=url, auth=auth)
@@ -287,7 +290,8 @@ def get_pull_request_files(repo_name: str,
 
 def get_pull_request_issue_comments(repo_name: str,
                                     pull_request_number: int,
-                                    auth: Tuple[str, str] = None) -> List[dict]:
+                                    auth: Tuple[str, str] = None
+) -> Union[List[dict], None]:
     """Retrieves a list of pull request issue comments information.
 
     Args:
@@ -305,7 +309,7 @@ def get_pull_request_issue_comments(repo_name: str,
 
 def get_commit_info(repo_name: str,
                     commit_ref: str,
-                    auth: Tuple[str, str] = None) -> dict:
+                    auth: Tuple[str, str] = None) -> Union[dict, None]:
     """Retrieves a commit information.
 
     Args:
@@ -321,7 +325,7 @@ def get_commit_info(repo_name: str,
 
 def get_commit_check_runs(repo_name: str,
                           commit_ref: str,
-                          auth: Tuple[str, str] = None) -> dict:
+                          auth: Tuple[str, str] = None) -> Union[dict, None]:
     """Retrieves check run results for a commit.
 
     Args:
@@ -356,7 +360,8 @@ def is_pull_request_merged(repo_name: str,
 
 
 def get_user_public_events(username: str,
-                           auth: Tuple[str, str] = None) -> List[dict]:
+                           auth: Tuple[str, str] = None
+) -> Union[List[dict], None]:
     """Retrieves the public events of a username login.
 
     Args:

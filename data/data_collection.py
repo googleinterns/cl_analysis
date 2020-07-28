@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
 from data.utils import *
 import re
+import csv
+import os
 from collections import defaultdict
 import pandas as pd
 from typing import Tuple
@@ -23,14 +24,19 @@ from typing import Tuple
 class DataCollector:
     """Class that collects pull request level signals.
 
-    This class takes a repository name, optional authentication token,
-    a boolean variable that indicates if collecting all of the pull
-    requests or not, and a page number. If the find_all is set to True, then
-    the DataCollector will collect the signals of all pull requests and
-    ignore the page number.
+    This class takes a repository name, a start date indicating the earliest
+    date to retrieve, an end date indicating the latest date to retrieve,
+    optional authentication token, a boolean variable that indicates if
+    collecting all of the pull requests or not, and a page number. If the
+    find_all is set to True, then the DataCollector will collect the signals
+    of all pull requests and ignore the page number. The DataCollector will
+    collect the data with the start date and the end date. Such information is
+    configurable in config.txt.
 
     Attributes:
         _repo_name: A str of repository name.
+        _start_date: A str of earliest date to retrieve.
+        _end_date: A str of latest date to retrieve.
         _auth: A tuple of username, token.
         _find_all: A boolean indicating if collecting all of the pull
             requests or not.
@@ -38,6 +44,8 @@ class DataCollector:
             should retrieve.
     """
     def __init__(self, repo_name: str,
+                 start_date: str,
+                 end_date: str,
                  auth: Tuple[str, str] = None,
                  find_all: bool = False,
                  page: int = 1) -> None:
@@ -45,6 +53,8 @@ class DataCollector:
 
         Args:
             repo_name: A str of repository name.
+            start_date: A str of earliest date to retrieve.
+            end_date: A str of latest date to retrieve.
             auth: A tuple of username, token.
             find_all: A boolean indicating if collecting all of the pull
                 requests or not.
@@ -52,6 +62,8 @@ class DataCollector:
                 should retrieve.
         """
         self._repo_name = repo_name
+        self._start_date = start_date
+        self._end_date = end_date
         self._auth = auth
         self._find_all = find_all
         if page < 1:
@@ -85,22 +97,43 @@ class DataCollector:
         Returns: None
         """
         print("Collecting signals for %s" % self._repo_name)
-        data = []
-        if args.all:
+        if not os.path.exists(
+                './%s_pull_requests_signals.csv' % self._repo_name):
+            with open('./%s_pull_requests_signals.csv' % self._repo_name, 'a') \
+                    as file:
+                writer = csv.writer(file)
+                writer.writerow(["repo name", "pull request id", "author",
+                                 "pull request created time",
+                                 "pull request closed time",
+                                 "pull request review time",
+                                 "reverted pull request id",
+                                 "pull request revert time",
+                                 "num review comments", "review comments msg",
+                                 "num issue comments", "issue comments msg",
+                                 "num approved reviewers", "approved reviewers",
+                                 "num commits", "num line changes",
+                                 "files changes",
+                                 "file versions", "check run results"])
+        if self._find_all:
             print("Retrieving all pull requests for %s" % self._repo_name)
             pull_requests = get_all_pull_requests(
-                self._repo_name, 'closed', self._auth)
+                self._repo_name, self._start_date, self._end_date, 'closed',
+                self._auth)
+            save_pull_requests(self._repo_name, pull_requests)
         else:
             print("Retrieving pull requests on page %s for %s"
                   % (self._page, self._repo_name))
             pull_requests = get_pull_requests_by_page(
-                self._page, self._repo_name, 'closed', self._auth)
+                self._page, self._repo_name, self._start_date, self._end_date,
+                'closed', self._auth)
 
         for pull_request_info in pull_requests:
             datum = self._collect_signals_for_one_pull_request(
                 pull_request_info)
-            data.append(datum)
-        self._save_to_csv(data)
+            with open('./%s_pull_requests_signals.csv' % self._repo_name, 'a') \
+                    as file:
+                writer = csv.writer(file)
+                writer.writerow(datum)
 
     def _collect_signals_for_one_pull_request(
             self, pull_request_info: dict
@@ -171,7 +204,7 @@ class DataCollector:
         pull_request_closed_time = to_timestamp(pull_request_info['closed_at'])
         pull_request_review_time = pull_request_closed_time - \
             pull_request_created_time
-        return pull_request_created_time, pull_request_closed_time, \
+        return pull_request_info['created_at'], pull_request_info['closed_at'],\
             pull_request_review_time
 
     def _get_reverted_pull_request_info(
@@ -192,8 +225,10 @@ class DataCollector:
             pull_request_info['created_at'])
 
         if body and 'revert' in body.lower():
-            match = re.findall('#[0-9]+', body)[0]
-            reverted_pull_request_number = int(re.sub('#', '', match))
+            matches = re.findall('#[0-9]+', body)
+            if not matches or len(matches) == 0:
+                return reverted_pull_request_number, pull_request_revert_time
+            reverted_pull_request_number = int(re.sub('#', '', matches[0]))
             reverted_pull_request_info = get_pull_request_info(
                 self._repo_name, reverted_pull_request_number, self._auth)
             reverted_pull_request_created_time = to_timestamp(
@@ -334,30 +369,6 @@ class DataCollector:
                                   num_changes))
         return files_changes, num_line_changes
 
-    def _save_to_csv(self, data) -> None:
-        """Transforms a list of lists to a pandas DataFrame and save to CSV.
-
-        Args:
-            data: A list of lists. Each single list is a piece of datum,
-            containing the signals of a pull request. This whole list contains
-            the signals of all pull requests.
-        Returns: None.
-        """
-        print("Saving signals to csv file")
-        df = pd.DataFrame(data)
-        df.columns = ["repo name", "pull request id", "author",
-                      "pull request created time", "pull request closed time",
-                      "pull request review time",
-                      "reverted pull request id",
-                      "pull request revert time",
-                      "num review comments", "review comments msg",
-                      "num issue comments", "issue comments msg",
-                      "num approved reviewers", "approved reviewers",
-                      "num commits", "num line changes", "files changes",
-                      "file versions", "check run results"]
-        df.to_csv('./%s_pull_requests_signals.csv' % self._repo_name,
-                  index=False)
-
 
 def main(arguments):
     """
@@ -365,18 +376,23 @@ def main(arguments):
     provided repository name, username, token, all which is a boolean
     indicating if collecting all of the pull requests, and a page.
     """
-    auth = (arguments.username, arguments.token)
-    data_collector = DataCollector(arguments.repo, auth,
-                                   arguments.all, arguments.page)
+    auth = (arguments['username'], arguments['token'])
+    data_collector = DataCollector(arguments['repo name'],
+                                   arguments['start date'],
+                                   arguments['end date'], auth,
+                                   arguments['all'], arguments['page'])
     data_collector.collect_signals()
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--repo', type=str, default='google/tink')
-    parser.add_argument('--all', action='store_true')
-    parser.add_argument('--page', type=int, default=1)
-    parser.add_argument('--username', type=str, default='')
-    parser.add_argument('--token', type=str, default='')
-    args = parser.parse_args()
+    args = {}
+    with open('./config.txt', 'r') as config_file:
+        for line in config_file:
+            key, value = line.split(',')
+            args[key] = value.strip()
+    if args['all'] == 'True':
+        args['all'] = True
+    else:
+        args['all'] = False
+    args['page'] = int(args['page'])
     main(args)

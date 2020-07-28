@@ -54,7 +54,7 @@ def send_request(url: str,
         return json_response
     except requests.exceptions.HTTPError as http_error:
         logging.error("Http Error:", http_error)
-        raise SystemExit(http_error)
+        return None
     except requests.exceptions.ConnectionError as connection_error:
         logging.error("Error Connecting:", connection_error)
         raise SystemExit(connection_error)

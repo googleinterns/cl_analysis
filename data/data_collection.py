@@ -119,6 +119,8 @@ class DataCollector:
             pull_requests = get_all_pull_requests(
                 self._repo_name, self._start_date, self._end_date, 'closed',
                 self._auth)
+            if pull_requests is None:
+                return
             save_pull_requests(self._repo_name, pull_requests)
         else:
             print("Retrieving pull requests on page %s for %s"
@@ -126,10 +128,16 @@ class DataCollector:
             pull_requests = get_pull_requests_by_page(
                 self._page, self._repo_name, self._start_date, self._end_date,
                 'closed', self._auth)
+            if pull_requests is None:
+                return
 
         for pull_request_info in pull_requests:
+            if not pull_request_info:
+                continue
             datum = self._collect_signals_for_one_pull_request(
                 pull_request_info)
+            if not datum:
+                continue
             with open('./%s_pull_requests_signals.csv' % self._repo_name, 'a') \
                     as file:
                 writer = csv.writer(file)
@@ -175,8 +183,12 @@ class DataCollector:
         file_versions = self._get_file_versions(commits)
         check_run_results = self._get_check_run_results(commits)
 
-        files_changes, num_line_changes = \
-            self._get_file_changes(pull_request_number)
+        file_changes_tuple = self._get_file_changes(pull_request_number)
+        if file_changes_tuple:
+            files_changes, num_line_changes = file_changes_tuple
+        else:
+            files_changes = None
+            num_line_changes = None
 
         datum = [self._repo_name, pull_request_number, contributor,
                  pull_request_created_time, pull_request_closed_time,
@@ -227,10 +239,12 @@ class DataCollector:
         if body and 'revert' in body.lower():
             matches = re.findall('#[0-9]+', body)
             if not matches or len(matches) == 0:
-                return reverted_pull_request_number, pull_request_revert_time
+                return 0, 0
             reverted_pull_request_number = int(re.sub('#', '', matches[0]))
             reverted_pull_request_info = get_pull_request_info(
                 self._repo_name, reverted_pull_request_number, self._auth)
+            if not reverted_pull_request_info:
+                return 0, 0
             reverted_pull_request_created_time = to_timestamp(
                 reverted_pull_request_info['created_at'])
             pull_request_revert_time = pull_request_created_time - \
@@ -250,6 +264,8 @@ class DataCollector:
         """
         review_comments = get_pull_request_review_comments(
             self._repo_name, pull_request_number, self._auth)
+        if not review_comments:
+            return []
         review_comments_msg = []
         for comment in review_comments:
             review_comments_msg.append((comment['path'], comment['body']))
@@ -265,6 +281,8 @@ class DataCollector:
         """
         issue_comments = get_pull_request_issue_comments(
             self._repo_name, pull_request_number, self._auth)
+        if not issue_comments:
+            return []
         issue_comments_msg = []
         for comment in issue_comments:
             issue_comments_msg.append(comment['body'])
@@ -280,6 +298,8 @@ class DataCollector:
         """
         reviews = get_pull_request_reviews(
             self._repo_name, pull_request_number, self._auth)
+        if not reviews:
+            return []
         approved_reviewers = set()
         for review in reviews:
             if review['state'] == 'APPROVED':
@@ -303,6 +323,8 @@ class DataCollector:
             commit_ref = commit['sha']
             commit_info = get_commit_info(
                 self._repo_name, commit_ref, self._auth)
+            if not commit_info:
+                continue
             commit_files = commit_info['files']
             for commit_file in commit_files:
                 commit_file_name = commit_file['filename']
@@ -325,6 +347,8 @@ class DataCollector:
             commit_ref = commit['sha']
             commit_check_run_results = get_commit_check_runs(
                 self._repo_name, commit_ref, self._auth)
+            if not commit_check_run_results:
+                continue
             num_check_runs = commit_check_run_results['total_count']
             if num_check_runs == 0:
                 check_run_results.append('none')
@@ -341,7 +365,7 @@ class DataCollector:
 
     def _get_file_changes(
             self, pull_request_number: int
-    ) -> Tuple[List[Tuple[str, int, int, int]], int]:
+    ) -> Union[Tuple[List[Tuple[str, int, int, int]], int], None]:
         """Retrieves the file changes information given a pull request id.
 
         This functions retrieves the line changes for each file path and the
@@ -357,6 +381,8 @@ class DataCollector:
         """
         files = get_pull_request_files(
             self._repo_name, pull_request_number, self._auth)
+        if not files:
+            return None
         files_changes = []
         num_line_changes = 0
         for file in files:

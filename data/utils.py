@@ -197,8 +197,11 @@ def get_pull_requests_by_page(page: int,
         return None
     pull_request_info_list = []
     for pull_request_info in json_response:
-        close_time = pull_request_info['closed_at']
-        if to_timestamp(start_date) <= to_timestamp(close_time) \
+        closed_time = pull_request_info['closed_at']
+        merged_time = pull_request_info['merged_at']
+        if not merged_time:
+            continue
+        if to_timestamp(start_date) <= to_timestamp(closed_time) \
                 <= to_timestamp(end_date):
             pull_request_info_list.append(pull_request_info)
     return pull_request_info_list

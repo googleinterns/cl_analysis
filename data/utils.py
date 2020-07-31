@@ -39,10 +39,10 @@ def send_request(url: str,
     try:
         logging.basicConfig(format='%(asctime)s,%(msecs)d %(levelname)-8s '
                                    '[%(filename)s:%(lineno)d] %(message)s',
-                            datefmt='%Y-%m-%d:%H:%M:%S',level=logging.INFO)
+                            datefmt='%Y-%m-%d:%H:%M:%S', level=logging.INFO)
 
         session = requests.Session()
-        retry = Retry(connect=5, backoff_factor=0.5)
+        retry = Retry(connect=10, backoff_factor=5)
         adapter = HTTPAdapter(max_retries=retry)
         session.mount('http://', adapter)
         session.mount('https://', adapter)
@@ -54,7 +54,7 @@ def send_request(url: str,
         return json_response
     except requests.exceptions.HTTPError as http_error:
         logging.error("Http Error:", http_error)
-        raise SystemExit(http_error)
+        return None
     except requests.exceptions.ConnectionError as connection_error:
         logging.error("Error Connecting:", connection_error)
         raise SystemExit(connection_error)
@@ -64,6 +64,28 @@ def send_request(url: str,
     except requests.exceptions.RequestException as request_exception:
         logging.error("Request Exception:", request_exception)
         raise SystemExit(request_exception)
+
+
+def send_request_all_pages(url: str,
+                           headers: dict = None,
+                           auth: Tuple[str, str] = None) -> List[dict]:
+    """Performs HTTP requests to retrieve responses from all pages.
+
+    Args:
+        url: A str of the HTTP endpoint.
+        headers: A dict of HTTP request headers.
+        auth: A tuple of username, token.
+    Returns:
+        A list of dicts. Each dict holds a piece of information.
+    """
+    results = []
+    for page in count(1):
+        query_parameters = {'page': page, 'per_page': 100}
+        json_response = send_request(url, query_parameters, headers, auth)
+        if not json_response:
+            break
+        results.extend(json_response)
+    return results
 
 
 def get_all_repositories(
@@ -143,7 +165,7 @@ def get_all_pull_requests(repo_name: str,
     for page in count(1):
         pull_requests_by_page = get_pull_requests_by_page(
             page, repo_name, start_date, end_date, state, auth)
-        if not pull_requests_by_page:
+        if pull_requests_by_page is None:
             break
         pull_requests.extend(pull_requests_by_page)
     return pull_requests
@@ -155,7 +177,7 @@ def get_pull_requests_by_page(page: int,
                               end_date: str,
                               state: str = 'closed',
                               auth: Tuple[str, str] = None
-                              ) -> List[dict]:
+) -> Union[List[dict], None]:
     """Retrieves a list of pull requests information on a certain page.
 
     Args:
@@ -172,11 +194,14 @@ def get_pull_requests_by_page(page: int,
     query_parameters = {'page': page, 'state': state, 'per_page': 100}
     json_response = send_request(url=url, params=query_parameters, auth=auth)
     if not json_response:
-        return []
+        return None
     pull_request_info_list = []
     for pull_request_info in json_response:
-        close_time = pull_request_info['closed_at']
-        if to_timestamp(start_date) <= to_timestamp(close_time) \
+        closed_time = pull_request_info['closed_at']
+        merged_time = pull_request_info['merged_at']
+        if not merged_time:
+            continue
+        if to_timestamp(start_date) <= to_timestamp(closed_time) \
                 <= to_timestamp(end_date):
             pull_request_info_list.append(pull_request_info)
     return pull_request_info_list
@@ -200,7 +225,7 @@ def save_pull_requests(repo_name: str, pull_requests: List[dict]) -> None:
 
 def get_pull_request_info(repo_name: str,
                           pull_request_number: int,
-                          auth: Tuple[str, str] = None) -> dict:
+                          auth: Tuple[str, str] = None) -> Union[dict, None]:
     """Retrieves pull request information.
 
     Retrieves pull request information of given repository name, pull request
@@ -221,7 +246,7 @@ def get_pull_request_info(repo_name: str,
 def get_pull_request_review_comments(repo_name: str,
                                      pull_request_number: int,
                                      auth: Tuple[str, str] = None
-                                     ) -> List[dict]:
+) -> List[dict]:
     """Retrieves a list of pull request review comments.
 
     Pull request review comments are comments on a portion of the unified diff
@@ -237,12 +262,13 @@ def get_pull_request_review_comments(repo_name: str,
     """
     url = "https://api.github.com/repos/%s/pulls/%s/comments" % (
         repo_name, pull_request_number)
-    return send_request(url=url, auth=auth)
+    return send_request_all_pages(url=url, auth=auth)
 
 
 def get_pull_request_reviews(repo_name: str,
                              pull_request_number: int,
-                             auth: Tuple[str, str] = None) -> List[dict]:
+                             auth: Tuple[str, str] = None
+) -> List[dict]:
     """Retrieves a list of pull request review information.
 
     Pull Request Reviews are groups of Pull Request Review Comments on the Pull
@@ -257,12 +283,13 @@ def get_pull_request_reviews(repo_name: str,
     """
     url = "https://api.github.com/repos/%s/pulls/%s/reviews" % (
         repo_name, pull_request_number)
-    return send_request(url=url, auth=auth)
+    return send_request_all_pages(url=url, auth=auth)
 
 
 def get_pull_request_commits(repo_name: str,
                              pull_request_number: int,
-                             auth: Tuple[str, str] = None) -> List[dict]:
+                             auth: Tuple[str, str] = None
+) -> List[dict]:
     """Retrieves a list of pull request commits information.
 
     Args:
@@ -274,20 +301,22 @@ def get_pull_request_commits(repo_name: str,
     """
     url = "https://api.github.com/repos/%s/pulls/%s/commits" % (
         repo_name, pull_request_number)
-    return send_request(url=url, auth=auth)
+    return send_request_all_pages(url=url, auth=auth)
 
 
 def get_pull_request_files(repo_name: str,
                            pull_request_number: int,
-                           auth: Tuple[str, str] = None) -> List[dict]:
+                           auth: Tuple[str, str] = None
+) -> List[dict]:
     url = "https://api.github.com/repos/%s/pulls/%s/files" % (
         repo_name, pull_request_number)
-    return send_request(url=url, auth=auth)
+    return send_request_all_pages(url=url, auth=auth)
 
 
 def get_pull_request_issue_comments(repo_name: str,
                                     pull_request_number: int,
-                                    auth: Tuple[str, str] = None) -> List[dict]:
+                                    auth: Tuple[str, str] = None
+) -> List[dict]:
     """Retrieves a list of pull request issue comments information.
 
     Args:
@@ -300,12 +329,12 @@ def get_pull_request_issue_comments(repo_name: str,
     """
     url = "https://api.github.com/repos/%s/issues/%s/comments" % (
         repo_name, pull_request_number)
-    return send_request(url=url, auth=auth)
+    return send_request_all_pages(url=url, auth=auth)
 
 
 def get_commit_info(repo_name: str,
                     commit_ref: str,
-                    auth: Tuple[str, str] = None) -> dict:
+                    auth: Tuple[str, str] = None) -> Union[dict, None]:
     """Retrieves a commit information.
 
     Args:
@@ -321,7 +350,7 @@ def get_commit_info(repo_name: str,
 
 def get_commit_check_runs(repo_name: str,
                           commit_ref: str,
-                          auth: Tuple[str, str] = None) -> dict:
+                          auth: Tuple[str, str] = None) -> Union[dict, None]:
     """Retrieves check run results for a commit.
 
     Args:
@@ -356,7 +385,8 @@ def is_pull_request_merged(repo_name: str,
 
 
 def get_user_public_events(username: str,
-                           auth: Tuple[str, str] = None) -> List[dict]:
+                           auth: Tuple[str, str] = None
+) -> List[dict]:
     """Retrieves the public events of a username login.
 
     Args:
@@ -366,7 +396,7 @@ def get_user_public_events(username: str,
         A list of dicts. Each dict holds the past events for a user.
     """
     url = "https://api.github.com/users/%s/events" % username
-    return send_request(url=url, auth=auth)
+    return send_request_all_pages(url=url, auth=auth)
 
 
 def to_timestamp(time_str: str) -> float:

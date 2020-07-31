@@ -186,8 +186,8 @@ class DataCollector:
         if file_changes_tuple:
             files_changes, num_line_changes = file_changes_tuple
         else:
-            files_changes = None
-            num_line_changes = None
+            files_changes = []
+            num_line_changes = 0
 
         datum = [self._repo_name, pull_request_number, contributor,
                  pull_request_created_time, pull_request_closed_time,

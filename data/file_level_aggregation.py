@@ -34,7 +34,7 @@ class FileData:
         """Init FileData."""
         self.file_name = None
         self.repo_name = None
-        self.data = defaultdict(list)
+        self.data = {}
 
     def __repr__(self) -> str:
         """Return the str representation of FileData.
@@ -49,17 +49,18 @@ class DataAggregator:
     """Class that takes in a CSV file and aggregate the signals on file level.
 
     This class takes in pull request signals and aggregate them based on file.
-    The operations are done by putting the pull request level signals into
-    a list for each file involved in a certain pull request.
+    The operations are done by generating a file table for each file in each
+    pull request. Same file in different pull requests are maintained in
+    different entries. 
 
     Attributes:
         _pr_level_data: A pandas DataFrame that contains the pull request level
             signals.
-        _pr_level_columns: A dict that holds the pull request level signals
+        _pr_related_columns: A dict that holds the pull request level signals
             columns, the keys are the column names and the values are the
             functions to convert the str to corresponding types.
-        _file_level_columns: A dict that holds the file level signals columns.
-        _file_level_data: A dict that holds the file level signals.
+        _file_related_columns: A dict that holds the file level signals columns.
+        _file_level_data: A list of dicts that hold the file level signals.
     """
     def __init__(self, file: str) -> None:
         """Inits DataAggregator with the CSV file name.
@@ -69,10 +70,10 @@ class DataAggregator:
         """
 
         self._pr_level_data = pd.read_csv(file)
-        self._pr_level_columns = {
+        self._pr_related_columns = {
             'author': str, 'pull request id': int,
-            'pull request created time': float,
-            'pull request closed time': float,
+            'pull request created time': str,
+            'pull request closed time': str,
             'pull request review time': float,
             'reverted pull request id': int,
             'pull request revert time': float,
@@ -82,12 +83,12 @@ class DataAggregator:
             'approved reviewers': eval, 'num commits': int,
             'num line changes': int
             }
-        self._file_level_columns = {
+        self._file_related_columns = {
             'files changes': eval,
             'file versions': eval,
             'review comments msg': eval
             }
-        self._file_level_data = defaultdict(FileData)
+        self._file_level_data = []
 
     def aggregate(self) -> None:
         """Aggregate the pull request level signals to file level.
@@ -104,75 +105,87 @@ class DataAggregator:
             datum = self._pr_level_data.iloc[idx]
             repo_name = str(datum['repo name'])
             check_run_results = eval(datum['check run results'])
-            pr_level_values, file_level_values = self._get_value_dict(datum)
-            file_versions = file_level_values['file versions']
+            pr_related_values, file_related_values = self._get_value_dict(datum)
+            file_versions = file_related_values['file versions']
             file_names = file_versions.keys()
 
-            self._aggregate_pr_level_signals(
-                pr_level_values, file_names, repo_name, check_run_results)
-            self._aggregate_file_level_signals(file_level_values, file_versions)
-        self._file_level_data = dict(self._file_level_data)
+            file_data_dict = defaultdict(FileData)
+            self._aggregate_pr_related_signals(
+                pr_related_values, file_names, repo_name, check_run_results,
+                file_data_dict)
+            self._aggregate_file_related_signals(
+                file_related_values, file_versions, file_data_dict)
+
+            for file in file_data_dict:
+                file_data = file_data_dict[file].data
+                file_data['file name'] = file_data_dict[file].file_name
+                file_data['repo name'] = file_data_dict[file].repo_name
+                self._file_level_data.append(file_data)
 
     def _get_value_dict(self, datum: pd.Series) -> Tuple[dict, dict]:
-        """Build the file level values dict and pull request level dict.
+        """Build the file related values dict and pull request related dict.
 
         This function takes in a panda Series and returns the pull request
-        level values dict and the file level values dict
+        related values dict and the file related values dict
 
         Args:
             datum: A pandas Series that holds a piece of datum of
                 pull request level signal.
 
         Returns:
-            A tuple of two dicts, the pull request level signals values and
-            the file level signals values.
+            A tuple of two dicts, the pull request related signals values and
+            the file related signals values.
         """
-        pr_level_values = {}
-        for column in self._pr_level_columns:
-            pr_level_values[column] = \
-                self._pr_level_columns[column](datum[column])
+        pr_related_values = {}
+        for column in self._pr_related_columns:
+            pr_related_values[column] = \
+                self._pr_related_columns[column](datum[column])
 
-        file_level_values = {}
-        for column in self._file_level_columns:
-            file_level_values[column] = \
-                self._file_level_columns[column](datum[column])
-        return pr_level_values, file_level_values
+        file_related_values = {}
+        for column in self._file_related_columns:
+            file_related_values[column] = \
+                self._file_related_columns[column](datum[column])
+        return pr_related_values, file_related_values
 
-    def _aggregate_file_level_signals(
-            self, file_level_values: dict, file_versions: dict) -> None:
+    @staticmethod
+    def _aggregate_file_related_signals(
+            file_related_values: dict,
+            file_versions: dict,
+            file_data_dict: dict
+    ) -> None:
         """Aggregate the signals of file level columns.
 
         This function takes a file level signals values dict and a file versions
         dict, and aggregates the signals that are on file level.
 
         Args:
-            file_level_values: A file level signals values dict, keys are the
-                columns and the values are the corresponding values.
+            file_related_values: A file related signals values dict, keys are
+                the columns and the values are the corresponding values.
             file_versions: A file versions dict, keys are the file names and
                 the values are the number of file versions.
+            file_data_dict: A dict of file data to fill in.
 
         Returns: None
         """
         for file_name, version in file_versions.items():
-            self._file_level_data[file_name].data['file versions'] \
-                .append(version)
+            file_data_dict[file_name].data['file versions'] = version
 
-        file_changes = file_level_values['files changes']
+        file_changes = file_related_values['files changes']
         for file_change in file_changes:
             file_name, addition, deletion, changes = file_change
-            self._file_level_data[file_name].data['files changes'].append(
-                (addition, deletion, changes))
+            file_data_dict[file_name].data['files changes'] = \
+                (addition, deletion, changes)
 
-        review_comments_msg = file_level_values['review comments msg']
+        review_comments_msg = file_related_values['review comments msg']
         for review_msg in review_comments_msg:
             file_name, msg = review_msg
-            self._file_level_data[file_name].data['review comments msg'] \
-                .append(msg)
+            file_data_dict[file_name].data['review comments msg'] = msg
 
-    def _aggregate_pr_level_signals(
-            self, pr_level_values: dict,
+    def _aggregate_pr_related_signals(
+            self, pr_related_values: dict,
             file_names: List[str], repo_name: str,
-            check_run_results: List[str]
+            check_run_results: List[str],
+            file_data_dict: dict
     ) -> None:
         """Aggregate the signals of pull request level columns.
 
@@ -181,33 +194,32 @@ class DataAggregator:
         It aggregates the signals that are on pull request level.
 
         Args:
-            pr_level_values: A dict that holds the pull request level signal
-                values. The keys are the pull request level signals columns,
-                and the values are the pull request level signals values.
+            pr_related_values: A dict that holds the pull request related signal
+                values. The keys are the pull request related signals columns,
+                and the values are the pull request related signals values.
             file_names: A list of file names.
             repo_name: A str of repository name.
             check_run_results: A list of check run result status.
                 Example: ['none', 'passed', 'failed'].
+            file_data_dict: A dict of file data to fill in.
+
         Returns: None
         """
         for file_name in file_names:
-            if not self._file_level_data[file_name].file_name:
-                self._file_level_data[file_name].file_name = file_name
+            if not file_data_dict[file_name].file_name:
+                file_data_dict[file_name].file_name = file_name
 
-            if not self._file_level_data[file_name].repo_name:
-                self._file_level_data[file_name].repo_name = repo_name
+            if not file_data_dict[file_name].repo_name:
+                file_data_dict[file_name].repo_name = repo_name
 
-            for column in self._pr_level_columns:
-                value = pr_level_values[column]
-                if type(value) is list:
-                    self._file_level_data[file_name].data[column].extend(value)
-                else:
-                    self._file_level_data[file_name].data[column].append(value)
+            for column in self._pr_related_columns:
+                value = pr_related_values[column]
+                file_data_dict[file_name].data[column] = value
 
             num_passed, num_failed = \
                 self._count_check_run_status(check_run_results)
-            self._file_level_data[file_name].data['check run results'].append(
-                (num_passed, num_failed))
+            file_data_dict[file_name].data['check run results'] = \
+                (num_passed, num_failed)
 
     @staticmethod
     def _count_check_run_status(
@@ -238,10 +250,8 @@ class DataAggregator:
         """
         print("Transform file level signals to data frame")
         series = []
-        for file_name in self._file_level_data:
-            datum = pd.Series(self._file_level_data[file_name].data)
-            datum['file name'] = file_name
-            datum['repo name'] = self._file_level_data[file_name].repo_name
+        for file_data in self._file_level_data:
+            datum = pd.Series(file_data)
             series.append(datum)
         return pd.DataFrame(series)
 
@@ -253,16 +263,16 @@ def main(arguments):
     signals for each file path and transforms to pandas DataFrame and
     save to another CSV file. 
     """
-    data_aggregator = DataAggregator(arguments.filename)
+    file_name = './%s_pull_requests_signals.csv' % arguments.repo
+    data_aggregator = DataAggregator(file_name)
     data_aggregator.aggregate()
     df = data_aggregator.to_df()
     print("Saving file level signals")
-    df.to_csv('./%s_file_level_signals.csv' % arguments.repo)
+    df.to_csv('./%s_file_level_signals.csv' % arguments.repo, index=False)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--filename', type=str)
     parser.add_argument('--repo', type=str)
     args = parser.parse_args()
     main(args)

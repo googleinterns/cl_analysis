@@ -302,7 +302,10 @@ class DataCollector:
         approved_reviewers = set()
         for review in reviews:
             if review['state'] == 'APPROVED':
-                approved_reviewers.add(review['user']['login'])
+                if review['user']:
+                    approved_reviewers.add(review['user']['login'])
+                else:
+                    approved_reviewers.add("")
         return list(approved_reviewers)
 
     def _get_file_versions(self, commits: List[dict]) -> dict:

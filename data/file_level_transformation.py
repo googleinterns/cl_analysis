@@ -45,10 +45,10 @@ class FileData:
         return str(self.data)
 
 
-class DataAggregator:
-    """Class that takes in a CSV file and aggregate the signals on file level.
+class DataTransformer:
+    """Class that takes in a CSV file and transform the signals to file level.
 
-    This class takes in pull request signals and aggregate them based on file.
+    This class takes in pull request signals and transforms them based on file.
     The operations are done by generating a file table for each file in each
     pull request. Same file in different pull requests are maintained in
     different entries. 
@@ -90,17 +90,17 @@ class DataAggregator:
             }
         self._file_level_data = []
 
-    def aggregate(self) -> None:
-        """Aggregate the pull request level signals to file level.
+    def transform(self) -> None:
+        """Transform the pull request level signals to file level.
 
-        This function aggregates the pull request level signals for each file by
-        adding them to a list. Each column is a kind of signal. For a certain
-        signal of a file that is involved in multiple pull requests,
-        a list of signals from multiple pull requests is maintained.
+        This function transforms the pull request level signals for each file by
+        keeping an entry for each file. Each column is a kind of signal.
+        For a certain signal of a file that is involved in multiple pull
+        requests, multiple entries are maintained.
 
         Returns: None
         """
-        print("Aggregating pull request signals to file level")
+        print("Transforming pull request signals to file level")
         for idx in range(len(self._pr_level_data)):
             datum = self._pr_level_data.iloc[idx]
             repo_name = str(datum['repo name'])
@@ -110,10 +110,10 @@ class DataAggregator:
             file_names = file_versions.keys()
 
             file_data_dict = defaultdict(FileData)
-            self._aggregate_pr_related_signals(
+            self._transform_pr_related_signals(
                 pr_related_values, file_names, repo_name, check_run_results,
                 file_data_dict)
-            self._aggregate_file_related_signals(
+            self._transform_file_related_signals(
                 file_related_values, file_versions, file_data_dict)
 
             for file in file_data_dict:
@@ -148,15 +148,15 @@ class DataAggregator:
         return pr_related_values, file_related_values
 
     @staticmethod
-    def _aggregate_file_related_signals(
+    def _transform_file_related_signals(
             file_related_values: dict,
             file_versions: dict,
             file_data_dict: dict
     ) -> None:
-        """Aggregate the signals of file level columns.
+        """Transform the signals of file level columns.
 
         This function takes a file level signals values dict and a file versions
-        dict, and aggregates the signals that are on file level.
+        dict, and transforms the signals that are file related.
 
         Args:
             file_related_values: A file related signals values dict, keys are
@@ -181,17 +181,17 @@ class DataAggregator:
             file_name, msg = review_msg
             file_data_dict[file_name].data['review comments msg'] = msg
 
-    def _aggregate_pr_related_signals(
+    def _transform_pr_related_signals(
             self, pr_related_values: dict,
             file_names: List[str], repo_name: str,
             check_run_results: List[str],
             file_data_dict: dict
     ) -> None:
-        """Aggregate the signals of pull request level columns.
+        """Transform the signals of pull request level columns.
 
         This function takes the pull request level values dict, a list of
         file names, repository name, and a list of check run results.
-        It aggregates the signals that are on pull request level.
+        It transforms the signals that are pull request related.
 
         Args:
             pr_related_values: A dict that holds the pull request related signal
@@ -258,14 +258,14 @@ class DataAggregator:
 
 def main(arguments):
     """
-    The main function which creates a DataAggregator given the file path
-    of the CSV file of the pull request level signals and aggregates the
+    The main function which creates a DataTransformer given the file path
+    of the CSV file of the pull request level signals and transforms the
     signals for each file path and transforms to pandas DataFrame and
     save to another CSV file. 
     """
     file_name = './%s_pull_requests_signals.csv' % arguments.repo
-    data_aggregator = DataAggregator(file_name)
-    data_aggregator.aggregate()
+    data_aggregator = DataTransformer(file_name)
+    data_aggregator.transform()
     df = data_aggregator.to_df()
     print("Saving file level signals")
     df.to_csv('./%s_file_level_signals.csv' % arguments.repo, index=False)

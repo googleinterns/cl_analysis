@@ -164,7 +164,10 @@ class DataTransformer:
         review_comments_msg = file_related_values['review comments msg']
         for review_msg in review_comments_msg:
             file_name, msg = review_msg
-            file_data_dict[file_name].data['review comments msg'] = msg
+            if 'review comments msg' not in file_data_dict[file_name].data or \
+                    not file_data_dict[file_name].data['review comments msg']:
+                file_data_dict[file_name].data['review comments msg'] = []
+            file_data_dict[file_name].data['review comments msg'].append(msg)
 
     def _transform_pr_related_signals(
             self, pr_related_values: dict,

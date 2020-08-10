@@ -69,14 +69,20 @@ class DataAggregator:
 
         aggregated_data = data_in_range.groupby(['file name', 'repo name']).agg(
             lambda x: list(x))
-        aggregated_data['issue comments msg'] = aggregated_data[
-            'issue comments msg'].apply(self.flatten_lst)
-        aggregated_data['approved reviewers'] = aggregated_data[
-            'approved reviewers'].apply(self.flatten_lst)
-        aggregated_data['review comments msg'] = aggregated_data[
-            'review comments msg'].apply(self.flatten_lst)
+        flatten_columns = ['issue comments msg', 'approved reviewers',
+                           'review comments msg']
+        for column in flatten_columns:
+            aggregated_data[column] = aggregated_data[column]\
+                .apply(self.flatten_lst)
         aggregated_data['author'] = aggregated_data['author']\
             .apply(set).apply(list)
+        for column in PULL_REQUEST_RELATED_COLUMNS:
+            aggregated_data[column] = aggregated_data[column]\
+                .apply(self.remove_nan)
+        for column in FILE_RELATED_COLUMNS:
+            aggregated_data[column] = aggregated_data[column]\
+                .apply(self.remove_nan)
+
         return aggregated_data
 
     @staticmethod
@@ -86,6 +92,14 @@ class DataAggregator:
             if not pd.isna(lst):
                 for e in eval(lst):
                     res.append(e)
+        return res
+
+    @staticmethod
+    def remove_nan(lst: List) -> List:
+        res = []
+        for e in lst:
+            if not pd.isna(e):
+                res.append(e)
         return res
 
 

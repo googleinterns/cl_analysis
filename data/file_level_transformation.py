@@ -16,6 +16,7 @@ import argparse
 from collections import defaultdict
 import pandas as pd
 from typing import List, Tuple
+from data.constants import *
 
 
 class FileData:
@@ -63,31 +64,15 @@ class DataTransformer:
         _file_level_data: A list of dicts that hold the file level signals.
     """
     def __init__(self, file: str) -> None:
-        """Inits DataAggregator with the CSV file name.
+        """Inits DataTransformer with the CSV file name.
 
         Args:
             file: The file path of pull request level CSV file.
         """
 
         self._pr_level_data = pd.read_csv(file)
-        self._pr_related_columns = {
-            'author': str, 'pull request id': int,
-            'pull request created time': str,
-            'pull request closed time': str,
-            'pull request review time': float,
-            'reverted pull request id': int,
-            'pull request revert time': float,
-            'num review comments': int,
-            'num issue comments': int, 'issue comments msg': eval,
-            'num approved reviewers': int,
-            'approved reviewers': eval, 'num commits': int,
-            'num line changes': int
-            }
-        self._file_related_columns = {
-            'files changes': eval,
-            'file versions': eval,
-            'review comments msg': eval
-            }
+        self._pr_related_columns = PULL_REQUEST_RELATED_COLUMNS
+        self._file_related_columns = FILE_RELATED_COLUMNS
         self._file_level_data = []
 
     def transform(self) -> None:

@@ -252,9 +252,9 @@ def main(arguments):
     save to another CSV file. 
     """
     file_name = './%s_pull_requests_signals.csv' % arguments.repo
-    data_aggregator = DataTransformer(file_name)
-    data_aggregator.transform()
-    df = data_aggregator.to_df()
+    data_transformer = DataTransformer(file_name)
+    data_transformer.transform()
+    df = data_transformer.to_df()
     print("Saving file level signals")
     df.to_csv('./%s_file_level_signals.csv' % arguments.repo, index=False)
 

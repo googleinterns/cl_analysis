@@ -110,7 +110,8 @@ def main(arguments):
     data_aggregator = DataAggregator(file_level_data)
     min_date = file_level_data['pull request closed time'].min()
     max_date = file_level_data['pull request closed time'].max()
-    start_date = datetime.fromisoformat(min_date[:-1]) + timedelta(days=31)
+    start_date = datetime.fromisoformat(min_date[:-1]) \
+        + timedelta(days=arguments.range+1)
     end_date = datetime.fromisoformat(max_date[:-1])
     dates = pd.date_range(start=start_date.strftime("%Y-%m-%d"),
                           end=end_date.strftime("%Y-%m-%d"))\
@@ -118,12 +119,14 @@ def main(arguments):
     for date in dates:
         date_str = date.strftime(format="%Y_%m_%d")
         print("Aggregating data on %s" % date_str)
-        aggregated_data = data_aggregator.aggregate(date.isoformat())
+        aggregated_data = data_aggregator\
+            .aggregate(date.isoformat(), arguments.range)
         aggregated_data.to_csv('./%s_%s.csv' % (arguments.repo, date_str))
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--repo', type=str)
+    parser.add_argument('--range', type=int, default=180)
     args = parser.parse_args()
     main(args)

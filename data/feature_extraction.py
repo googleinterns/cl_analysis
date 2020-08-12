@@ -12,172 +12,220 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import argparse
 import pandas as pd
+from datetime import datetime, timedelta
 
 
 class FeatureExtractor:
 
-    def __init__(self, file_name: str) -> None:
-        self._file_level_data = pd.read_csv(file_name)
+    def __init__(self, file_level_data: pd.DataFrame, date: str) -> None:
+        self._file_level_data = file_level_data
+        self._date = date
+        self._function_map = {
+            'author': [(self.compute_count, 'count')],
+            'pull request id': [(self.compute_count, 'count')],
+            'pull request review time': [(self.compute_sum, 'total'),
+                                         (self.compute_avg, 'avg')],
+            'reverted pull request id': [(self.compute_nonzero_count, 'count')],
+            'pull request revert time': [(self.compute_nonzero_avg, 'avg'),
+                                         (self.compute_nonzero_sum, 'total')],
+            'num review comments': [(self.compute_sum, 'total'),
+                                    (self.compute_avg, 'avg')],
+            'num issue comments': [(self.compute_sum, 'total'),
+                                    (self.compute_avg, 'avg')],
+            'num approved reviewers': [(self.compute_sum, 'total'),
+                                    (self.compute_avg, 'avg')],
+            'num commits': [(self.compute_sum, 'total'),
+                                    (self.compute_avg, 'avg')],
+            'num line changes': [(self.compute_sum, 'total'),
+                                    (self.compute_avg, 'avg')],
+            'file versions': [(self.compute_sum, 'total'),
+                                    (self.compute_avg, 'avg')]
+        }
+        self._function_map_with_args = {
+            'check run results': [(self.compute_avg_check_runs,
+                                  {0: "passed avg",
+                                   1: "failed avg"}),
+                                  (self.compute_total_check_runs,
+                                   {0: "passed count",
+                                    1: "failed count"})
+                                  ],
+            'files changes': [(self.compute_avg_file_changes,
+                              {0: "avg additions",
+                               1: "avg deletions",
+                               2: "avg changes"
+                              }),
+                              (self.compute_total_file_changes,
+                               {0: "total additions",
+                                1: "total deletions",
+                                2: "total changes"
+                                })
+                              ]
+        }
 
     def extract_features(self):
-        pass
+        for column in self._function_map:
+            for func, value in self._function_map[column]:
+                self._file_level_data[column+' '+value] = \
+                    self._file_level_data[column].apply(func)
+
+        for column in self._function_map_with_args:
+            for func, value in self._function_map_with_args[column]:
+                for index in value:
+                    self._file_level_data[column+' '+value[index]] = \
+                        self._file_level_data[column].apply(func, args=[index])
+
+        self._file_level_data['review comments msg avg count'] = \
+            self._file_level_data['review comments msg']\
+                .apply(self.compute_avg_count,
+                       args=[self._file_level_data['pull request id']])
 
     @staticmethod
-    def _get_num_pr(lst: str) -> int:
+    def compute_count(lst: str) -> int:
         if pd.isna(lst):
             return 0
-        pr_id_lst = pd.eval(lst)
-        return len(pr_id_lst)
+        if len(eval(lst)) == 0:
+            return 0
+        return len(eval(lst))
 
     @staticmethod
-    def _get_total_pr_review_time(lst: str) -> float:
+    def compute_avg(lst: str) -> float:
         if pd.isna(lst):
             return 0.0
-        pr_review_time_lst = pd.eval(lst)
-        return sum(pr_review_time_lst)
+        if len(eval(lst)) == 0:
+            return 0.0
+        return sum(eval(lst)) / len(eval(lst))
 
     @staticmethod
-    def _get_avg_pr_review_time(lst: str) -> float:
+    def compute_sum(lst: str) -> float:
         if pd.isna(lst):
             return 0.0
-        pr_review_time_lst = pd.eval(lst)
-        return sum(pr_review_time_lst) / len(pr_review_time_lst)
+        return sum(eval(lst))
 
     @staticmethod
-    def _get_num_reverted(lst: str) -> int:
+    def compute_nonzero_count(lst: str) -> int:
         if pd.isna(lst):
             return 0
-        reverted_pr_lst = pd.eval(lst)
+        lst = eval(lst)
         count = 0
-        for pr_id in reverted_pr_lst:
-            if pr_id != 0:
+        for e in lst:
+            if e != 0:
                 count += 1
         return count
 
     @staticmethod
-    def _get_avg_revert_time(lst: str) -> float:
+    def compute_nonzero_avg(lst: str) -> float:
         if pd.isna(lst):
             return 0.0
-        pr_revert_time_lst = pd.eval(lst)
-        total_revert_time = 0
+        lst = eval(lst)
+        total = 0
         count = 0
-        for revert_time in pr_revert_time_lst:
-            if revert_time != 0:
-                total_revert_time += revert_time
+        for e in lst:
+            if e != 0:
+                total += e
                 count += 1
-        return total_revert_time / count
+        if count == 0:
+            return 0.0
+        return total / count
 
     @staticmethod
-    def _get_total_num_file_review_comments(lst: str) -> float:
+    def compute_nonzero_sum(lst: str) -> float:
         if pd.isna(lst):
             return 0.0
-        review_comments_msg_lst = pd.eval(lst)
-        return len(review_comments_msg_lst)
+        lst = eval(lst)
+        total = 0
+        for e in lst:
+            if e != 0:
+                total += e
+        return total
 
     @staticmethod
-    def _get_avg_num_file_review_comments(lst: str, pr_ids: str) -> float:
+    def compute_avg_count(lst: str, pr_ids: pd.Series) -> float:
         if pd.isna(lst):
             return 0.0
-        review_comments_msg_lst = pd.eval(lst)
-        pr_id_lst = pd.eval(pr_ids)
-        return len(review_comments_msg_lst) / len(pr_id_lst)
+        if len(pr_ids) == 0:
+            return 0.0
+        return len(eval(lst)) / len(pr_ids)
 
     @staticmethod
-    def _get_total_num_pr_review_comments(lst: str) -> float:
+    def compute_total_check_runs(lst: str, index: int) -> int:
         if pd.isna(lst):
-            return 0.0
-        num_review_comments_lst = pd.eval(lst)
-        return sum(num_review_comments_lst)
+            return 0
+        check_run_results = eval(lst)
+        if len(check_run_results) == 0:
+            return 0
+        total = 0
+        for t in check_run_results:
+            total += eval(t)[index]
+        return total
 
     @staticmethod
-    def _get_avg_num_pr_review_comments(lst: str) -> float:
+    def compute_avg_check_runs(lst: str, index: int) -> float:
         if pd.isna(lst):
             return 0.0
-        num_review_comments_lst = pd.eval(lst)
-        return sum(num_review_comments_lst) / len(num_review_comments_lst)
+        check_run_results = eval(lst)
+        if len(check_run_results) == 0:
+            return 0.0
+        total = 0
+        for t in check_run_results:
+            total += eval(t)[index]
+        return total / len(check_run_results)
 
     @staticmethod
-    def _get_total_num_pr_issue_comments(lst: str) -> float:
+    def compute_total_file_changes(lst: str, index: int) -> int:
         if pd.isna(lst):
-            return 0.0
-        num_issue_comments_lst = pd.eval(lst)
-        return sum(num_issue_comments_lst)
+            return 0
+        files_changes_lst = eval(lst)
+        if len(files_changes_lst) == 0:
+            return 0
+        total = 0
+        for t in files_changes_lst:
+            changes = eval(t)[index]
+            total += changes
+        return total
 
     @staticmethod
-    def _get_avg_num_pr_issue_comments(lst: str) -> float:
+    def compute_avg_file_changes(lst: str, index: int) -> float:
         if pd.isna(lst):
             return 0.0
-        num_issue_comments_lst = pd.eval(lst)
-        return sum(num_issue_comments_lst) / len(num_issue_comments_lst)
+        files_changes_lst = eval(lst)
+        if len(files_changes_lst) == 0:
+            return 0.0
+        total = 0
+        for t in files_changes_lst:
+            changes = eval(t)[index]
+            total += changes
+        return total / len(files_changes_lst)
 
-    @staticmethod
-    def _get_avg_num_approved_reviewers(lst: str) -> float:
-        if pd.isna(lst):
-            return 0.0
-        num_approved_reviewers_lst = pd.eval(lst)
-        return sum(num_approved_reviewers_lst) / len(num_approved_reviewers_lst)
+    def save_to_csv(self, path):
+        self._file_level_data.to_csv(path)
 
-    @staticmethod
-    def _get_avg_num_pr_commits(lst: str) -> float:
-        if pd.isna(lst):
-            return 0.0
-        num_commits_lst = pd.eval(lst)
-        return sum(num_commits_lst) / len(num_commits_lst)
 
-    @staticmethod
-    def _get_avg_num_pr_line_changes(lst: str) -> float:
-        if pd.isna(lst):
-            return 0.0
-        num_line_changes_lst = pd.eval(lst)
-        return sum(num_line_changes_lst) / len(num_line_changes_lst)
+def main(arguments):
+    file_level_data = pd.read_csv(
+        './%s_file_level_signals.csv' % arguments.repo)
+    file_level_data = file_level_data[file_level_data['file name'].notna()]
+    min_date = file_level_data['pull request closed time'].min()
+    max_date = file_level_data['pull request closed time'].max()
+    start_date = datetime.fromisoformat(min_date[:-1]) + timedelta(days=31)
+    end_date = datetime.fromisoformat(max_date[:-1])
+    dates = pd.date_range(start=start_date.strftime("%Y-%m-%d"),
+                          end=end_date.strftime("%Y-%m-%d"))\
+        .to_pydatetime().tolist()
+    for date in dates:
+        date_str = date.strftime(format="%Y_%m_%d")
+        print("Extracting features on %s" % date_str)
+        file_name = './%s_%s.csv' % (arguments.repo, date_str)
+        file_level_data = pd.read_csv(file_name)
+        feature_extractor = FeatureExtractor(file_level_data, date_str)
+        feature_extractor.extract_features()
+        feature_extractor.save_to_csv('./%s_%s_features.csv' %
+                                      (arguments.repo, date_str))
 
-    @staticmethod
-    def _get_avg_passed_check_runs(lst: str) -> float:
-        if pd.isna(lst):
-            return 0.0
-        check_run_results = pd.eval(lst)
-        total_num_passed = 0
-        for num_passed, _ in check_run_results:
-            total_num_passed += num_passed
-        return total_num_passed / len(check_run_results)
 
-    @staticmethod
-    def _get_avg_failed_check_runs(lst: str) -> float:
-        if pd.isna(lst):
-            return 0.0
-        check_run_results = pd.eval(lst)
-        total_num_failed = 0
-        for _, num_failed in check_run_results:
-            total_num_failed += num_failed
-        return total_num_failed / len(check_run_results)
-
-    @staticmethod
-    def _get_avg_num_additions(lst: str) -> float:
-        if pd.isna(lst):
-            return 0.0
-        files_changes_lst = pd.eval(lst)
-        total_num_additions = 0
-        for additions, _, _ in files_changes_lst:
-            total_num_additions += additions
-        return total_num_additions / len(files_changes_lst)
-
-    @staticmethod
-    def _get_avg_num_deletions(lst: str) -> float:
-        if pd.isna(lst):
-            return 0.0
-        files_changes_lst = pd.eval(lst)
-        total_num_deletions = 0
-        for _, deletions, _ in files_changes_lst:
-            total_num_deletions += deletions
-        return total_num_deletions / len(files_changes_lst)
-
-    @staticmethod
-    def _get_avg_num_changes(lst: str) -> float:
-        if pd.isna(lst):
-            return 0.0
-        files_changes_lst = pd.eval(lst)
-        total_num_changes = 0
-        for _, _, changes in files_changes_lst:
-            total_num_changes += changes
-        return total_num_changes / len(files_changes_lst)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--repo', type=str)
+    args = parser.parse_args()
+    main(args)

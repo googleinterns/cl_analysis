@@ -208,7 +208,8 @@ def main(arguments):
     file_level_data = file_level_data[file_level_data['file name'].notna()]
     min_date = file_level_data['pull request closed time'].min()
     max_date = file_level_data['pull request closed time'].max()
-    start_date = datetime.fromisoformat(min_date[:-1]) + timedelta(days=31)
+    start_date = datetime.fromisoformat(min_date[:-1]) \
+        + timedelta(days=arguments.range + 1)
     end_date = datetime.fromisoformat(max_date[:-1])
     dates = pd.date_range(start=start_date.strftime("%Y-%m-%d"),
                           end=end_date.strftime("%Y-%m-%d"))\
@@ -227,5 +228,6 @@ def main(arguments):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--repo', type=str)
+    parser.add_argument('--range', type=int, default=180)
     args = parser.parse_args()
     main(args)

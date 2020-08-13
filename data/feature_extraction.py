@@ -199,7 +199,7 @@ class FeatureExtractor:
         return total / len(files_changes_lst)
 
     def save_to_csv(self, path):
-        self._file_level_data.to_csv(path)
+        self._file_level_data.to_csv(path, index=False)
 
 
 def main(arguments):

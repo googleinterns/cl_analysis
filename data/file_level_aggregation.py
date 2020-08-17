@@ -111,7 +111,7 @@ def main(arguments):
     min_date = file_level_data['pull request closed time'].min()
     max_date = file_level_data['pull request closed time'].max()
     start_date = datetime.fromisoformat(min_date[:-1]) \
-        + timedelta(days=arguments.range+1)
+        + timedelta(days=1)
     end_date = datetime.fromisoformat(max_date[:-1])
     dates = pd.date_range(start=start_date.strftime("%Y-%m-%d"),
                           end=end_date.strftime("%Y-%m-%d"))\

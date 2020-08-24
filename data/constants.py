@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# These columns are related to pull requests, not related to specific files.
 PULL_REQUEST_RELATED_COLUMNS = {
             'author': str, 'pull request id': int,
             'pull request created time': str,
@@ -26,6 +27,7 @@ PULL_REQUEST_RELATED_COLUMNS = {
             'num line changes': int
             }
 
+# These columns are related to specific files.
 FILE_RELATED_COLUMNS = {
             'files changes': eval,
             'file versions': eval,

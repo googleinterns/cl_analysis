@@ -18,9 +18,27 @@ from datetime import datetime, timedelta
 
 
 class FeatureExtractor:
+    """Class that takes aggregated file level signals and extract features.
 
+    Attributes:
+        _file_level_data: A pandas DataFrame containing file level signals.
+        _file_level_features: A pandas DataFrame to store file level features.
+        _date: A str indicating the date to extracted.
+        _function_map: A dict. The keys are the column names and the values
+            are the functions to apply and its functionality.
+        _function_map_with_args: A dict. The key are the column names and the
+            values are the functions to apply and its args list.
+    """
     def __init__(self, file_level_data: pd.DataFrame, date: str) -> None:
+        """Inits a FeatureExtractor.
+
+        Args:
+            file_level_data: A pandas DataFrame that holds aggregated file level
+                data.
+            date: A str indicating the date to extract.
+        """
         self._file_level_data = file_level_data
+        self._file_level_features = pd.DataFrame()
         self._date = date
         self._function_map = {
             'author': [(self.compute_count, 'count')],
@@ -64,25 +82,35 @@ class FeatureExtractor:
                               ]
         }
 
-    def extract_features(self):
+    def extract_features(self) -> None:
+        """Extracts the features from aggregated file level signals.
+        Returns: None
+        """
         for column in self._function_map:
             for func, value in self._function_map[column]:
-                self._file_level_data[column+' '+value] = \
+                self._file_level_features[column+' '+value] = \
                     self._file_level_data[column].apply(func)
 
         for column in self._function_map_with_args:
             for func, value in self._function_map_with_args[column]:
                 for index in value:
-                    self._file_level_data[column+' '+value[index]] = \
+                    self._file_level_features[column+' '+value[index]] = \
                         self._file_level_data[column].apply(func, args=[index])
 
-        self._file_level_data['review comments msg avg count'] = \
+        self._file_level_features['review comments msg avg count'] = \
             self._file_level_data['review comments msg']\
                 .apply(self.compute_avg_count,
                        args=[self._file_level_data['pull request id']])
 
     @staticmethod
     def compute_count(lst: str) -> int:
+        """Computes the count of the list.
+
+        Args:
+            lst: A str of list representation.
+
+        Returns: A integer indicating the count of the list.
+        """
         if pd.isna(lst):
             return 0
         if len(eval(lst)) == 0:
@@ -91,6 +119,13 @@ class FeatureExtractor:
 
     @staticmethod
     def compute_avg(lst: str) -> float:
+        """Computes the average of the list.
+
+        Args:
+            lst: A str of list representation.
+
+        Returns: A float indicating the average of the list.
+        """
         if pd.isna(lst):
             return 0.0
         if len(eval(lst)) == 0:
@@ -99,12 +134,26 @@ class FeatureExtractor:
 
     @staticmethod
     def compute_sum(lst: str) -> float:
+        """Computes the sum of the list.
+
+        Args:
+            lst: A str of list representation.
+
+        Returns: A float indicating the sum of the list.
+        """
         if pd.isna(lst):
             return 0.0
         return sum(eval(lst))
 
     @staticmethod
     def compute_nonzero_count(lst: str) -> int:
+        """Computes the count of nonzero elements in the list.
+
+        Args:
+            lst: A str of list representation.
+
+        Returns: A integer indicating the count of nonzero elements in the list.
+        """
         if pd.isna(lst):
             return 0
         lst = eval(lst)
@@ -116,6 +165,14 @@ class FeatureExtractor:
 
     @staticmethod
     def compute_nonzero_avg(lst: str) -> float:
+        """Computes the average of nonzero elements in the list.
+
+        Args:
+            lst: A str of list representation.
+
+        Returns: A integer indicating the average of nonzero elements
+            in the list.
+        """
         if pd.isna(lst):
             return 0.0
         lst = eval(lst)
@@ -131,6 +188,13 @@ class FeatureExtractor:
 
     @staticmethod
     def compute_nonzero_sum(lst: str) -> float:
+        """Computes the sum of nonzero elements in the list.
+
+        Args:
+            lst: A str of list representation.
+
+        Returns: A integer indicating the sum of nonzero elements in the list.
+        """
         if pd.isna(lst):
             return 0.0
         lst = eval(lst)
@@ -142,6 +206,14 @@ class FeatureExtractor:
 
     @staticmethod
     def compute_avg_count(lst: str, pr_ids: pd.Series) -> float:
+        """Computes the average count of the list.
+
+        Args:
+            lst: A str of list representation.
+            pr_ids: A pandas Series of pull request ids.
+
+        Returns: A float indicating the average count of the list.
+        """
         if pd.isna(lst):
             return 0.0
         if len(pr_ids) == 0:
@@ -150,6 +222,16 @@ class FeatureExtractor:
 
     @staticmethod
     def compute_total_check_runs(lst: str, index: int) -> int:
+        """Computes the count of check run results in the list.
+
+        Args:
+            lst: A str of list representation.
+            index: A integer indicating whether to count passed or failed.
+                0 for passed, 1 for failed.
+
+        Returns: A integer indicating the count of check run results in
+            the list.
+        """
         if pd.isna(lst):
             return 0
         check_run_results = eval(lst)
@@ -162,6 +244,16 @@ class FeatureExtractor:
 
     @staticmethod
     def compute_avg_check_runs(lst: str, index: int) -> float:
+        """Computes the average number of check run results in the list.
+
+        Args:
+            lst: A str of list representation.
+            index: A integer indicating whether to count passed or failed.
+                0 for passed, 1 for failed.
+
+        Returns: A integer indicating the average number of check run results in
+            the list.
+        """
         if pd.isna(lst):
             return 0.0
         check_run_results = eval(lst)
@@ -174,6 +266,15 @@ class FeatureExtractor:
 
     @staticmethod
     def compute_total_file_changes(lst: str, index: int) -> int:
+        """Computes the count of file changes in the list.
+
+        Args:
+            lst: A str of list representation.
+            index: A integer indicating whether to count additions, deletions
+                or changes. 0 for additions, 1 for deletions, and 2 for changes.
+
+        Returns: A integer indicating the count of file changes in the list.
+        """
         if pd.isna(lst):
             return 0
         files_changes_lst = eval(lst)
@@ -187,6 +288,16 @@ class FeatureExtractor:
 
     @staticmethod
     def compute_avg_file_changes(lst: str, index: int) -> float:
+        """Computes the average number of file changes in the list.
+
+        Args:
+            lst: A str of list representation.
+            index: A integer indicating whether to count additions, deletions
+                or changes. 0 for additions, 1 for deletions, and 2 for changes.
+
+        Returns: A integer indicating the average number of file changes
+            in the list.
+        """
         if pd.isna(lst):
             return 0.0
         files_changes_lst = eval(lst)
@@ -199,10 +310,20 @@ class FeatureExtractor:
         return total / len(files_changes_lst)
 
     def save_to_csv(self, path):
-        self._file_level_data.to_csv(path, index=False)
+        """Saves the features to csv file.
+
+        Args:
+            path: The path to save the csv file.
+        """
+        self._file_level_features.to_csv(path, index=False)
 
 
 def main(arguments):
+    """
+    This main function reads the file level signals from the csv, computes the
+    time range, and for the aggregated file level signals on each date, extract
+    the features and save to csv.
+    """
     file_level_data = pd.read_csv(
         './%s_file_level_signals.csv' % arguments.repo)
     file_level_data = file_level_data[file_level_data['file name'].notna()]

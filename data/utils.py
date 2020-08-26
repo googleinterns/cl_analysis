@@ -42,7 +42,8 @@ def send_request(url: str,
                             datefmt='%Y-%m-%d:%H:%M:%S', level=logging.INFO)
 
         session = requests.Session()
-        retry = Retry(total=100, connect=100, backoff_factor=0.01)
+        retry = Retry(total=100, connect=100, backoff_factor=0.01,
+                      status_forcelist=[429, 500, 502, 503, 504])
         adapter = HTTPAdapter(max_retries=retry)
         session.mount('http://', adapter)
         session.mount('https://', adapter)

@@ -38,7 +38,7 @@ class FeatureExtractor:
             date: A str indicating the date to extract.
         """
         self._file_level_data = file_level_data
-        self._file_level_features = pd.DataFrame()
+        self._file_level_features = file_level_data[['repo name', 'file name']]
         self._date = date
         self._function_map = {
             'author': [(self.compute_count, 'count')],

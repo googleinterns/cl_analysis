@@ -115,12 +115,20 @@ class DataCollector:
                                  "file versions", "check run results"])
         if self._find_all:
             print("Retrieving all pull requests for %s" % self._repo_name)
-            pull_requests = get_all_pull_requests(
-                self._repo_name, self._start_date, self._end_date, 'closed',
-                self._auth)
-            if pull_requests is None:
-                return
-            save_pull_requests(self._repo_name, pull_requests)
+            if not os.path.exists(
+                    './%s_pull_requests.txt' % self._repo_name):
+                pull_requests = get_all_pull_requests(
+                    self._repo_name, self._start_date, self._end_date, 'closed',
+                    self._auth)
+                if pull_requests is None:
+                    return
+                save_pull_requests(self._repo_name, pull_requests)
+            else:
+                print("Reading from file")
+                pull_requests = []
+                with open('./%s_pull_requests.txt' % self._repo_name, 'r') as f:
+                    for datum in f:
+                        pull_requests.append(eval(datum))
         else:
             print("Retrieving pull requests on page %s for %s"
                   % (self._page, self._repo_name))
@@ -132,6 +140,13 @@ class DataCollector:
 
         for pull_request_info in pull_requests:
             if not pull_request_info:
+                continue
+            closed_time = pull_request_info['closed_at']
+            merged_time = pull_request_info['merged_at']
+            if not merged_time:
+                continue
+            if not (to_timestamp(self._start_date) <=
+                    to_timestamp(closed_time) <= to_timestamp(self._end_date)):
                 continue
             datum = self._collect_signals_for_one_pull_request(
                 pull_request_info)

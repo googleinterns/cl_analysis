@@ -16,6 +16,7 @@ from data.utils import *
 import re
 import csv
 import os
+import pandas as pd
 from collections import defaultdict
 from typing import Tuple
 
@@ -138,8 +139,15 @@ class DataCollector:
             if pull_requests is None:
                 return
 
+        collected_pr_signals = pd.read_csv('./%s_pull_requests_signals.csv'
+                                           % self._repo_name)
+        pr_ids = set(collected_pr_signals['pull request id'].tolist())
+
         for pull_request_info in pull_requests:
             if not pull_request_info:
+                continue
+            pull_request_number = pull_request_info['number']
+            if pull_request_number in pr_ids:
                 continue
             closed_time = pull_request_info['closed_at']
             merged_time = pull_request_info['merged_at']

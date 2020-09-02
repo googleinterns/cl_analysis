@@ -74,7 +74,8 @@ class DataAggregator:
         self._file_level_data = \
             file_level_data[file_level_data['file name'].notna()]
 
-    def aggregate(self, date: str, time_range: int = 30) -> pd.DataFrame:
+    def aggregate(self, date: str, time_range: int = 30
+    ) -> Union[pd.DataFrame, None]:
         """Aggregates the historical file level signals on input date.
 
         This function takes in a date string, a integer indicating the time
@@ -103,7 +104,8 @@ class DataAggregator:
         data_in_range = self._file_level_data[
             (pr_closed_timestamp >= start_date_timestamp) &
             (end_date_timestamp >= pr_closed_timestamp)]
-
+        if data_in_range.empty:
+            return None
         aggregated_data = data_in_range.groupby(['file name', 'repo name']).agg(
             lambda x: list(x))
         flatten_columns = ['issue comments msg', 'approved reviewers',
@@ -182,7 +184,8 @@ def main(arguments):
         print("Aggregating data on %s" % date_str)
         aggregated_data = data_aggregator\
             .aggregate(date.isoformat(), arguments.range)
-        aggregated_data.to_csv('./%s_%s.csv' % (arguments.repo, date_str))
+        if aggregated_data is not None:
+            aggregated_data.to_csv('./%s_%s.csv' % (arguments.repo, date_str))
 
 
 if __name__ == '__main__':

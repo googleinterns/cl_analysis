@@ -16,6 +16,7 @@ from data.utils import *
 import re
 import csv
 import os
+import pandas as pd
 from collections import defaultdict
 from typing import Tuple
 
@@ -115,12 +116,20 @@ class DataCollector:
                                  "file versions", "check run results"])
         if self._find_all:
             print("Retrieving all pull requests for %s" % self._repo_name)
-            pull_requests = get_all_pull_requests(
-                self._repo_name, self._start_date, self._end_date, 'closed',
-                self._auth)
-            if pull_requests is None:
-                return
-            save_pull_requests(self._repo_name, pull_requests)
+            if not os.path.exists(
+                    './%s_pull_requests.txt' % self._repo_name):
+                pull_requests = get_all_pull_requests(
+                    self._repo_name, self._start_date, self._end_date, 'closed',
+                    self._auth)
+                if pull_requests is None:
+                    return
+                save_pull_requests(self._repo_name, pull_requests)
+            else:
+                print("Reading from file")
+                pull_requests = []
+                with open('./%s_pull_requests.txt' % self._repo_name, 'r') as f:
+                    for datum in f:
+                        pull_requests.append(eval(datum))
         else:
             print("Retrieving pull requests on page %s for %s"
                   % (self._page, self._repo_name))
@@ -130,8 +139,22 @@ class DataCollector:
             if pull_requests is None:
                 return
 
+        collected_pr_signals = pd.read_csv('./%s_pull_requests_signals.csv'
+                                           % self._repo_name)
+        pr_ids = set(collected_pr_signals['pull request id'].tolist())
+
         for pull_request_info in pull_requests:
             if not pull_request_info:
+                continue
+            pull_request_number = pull_request_info['number']
+            if pull_request_number in pr_ids:
+                continue
+            closed_time = pull_request_info['closed_at']
+            merged_time = pull_request_info['merged_at']
+            if not merged_time:
+                continue
+            if not (to_timestamp(self._start_date) <=
+                    to_timestamp(closed_time) <= to_timestamp(self._end_date)):
                 continue
             datum = self._collect_signals_for_one_pull_request(
                 pull_request_info)

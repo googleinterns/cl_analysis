@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import argparse
+import os
 import pandas as pd
 from datetime import datetime, timedelta
 
@@ -38,7 +39,7 @@ class FeatureExtractor:
             date: A str indicating the date to extract.
         """
         self._file_level_data = file_level_data
-        self._file_level_features = pd.DataFrame()
+        self._file_level_features = file_level_data[['repo name', 'file name']]
         self._date = date
         self._function_map = {
             'author': [(self.compute_count, 'count')],
@@ -337,8 +338,10 @@ def main(arguments):
         .to_pydatetime().tolist()
     for date in dates:
         date_str = date.strftime(format="%Y_%m_%d")
-        print("Extracting features on %s" % date_str)
         file_name = './%s_%s.csv' % (arguments.repo, date_str)
+        if not os.path.exists(file_name):
+            continue
+        print("Extracting features on %s" % date_str)
         file_level_data = pd.read_csv(file_name)
         feature_extractor = FeatureExtractor(file_level_data, date_str)
         feature_extractor.extract_features()

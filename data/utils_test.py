@@ -19,7 +19,7 @@ from requests import Session, exceptions
 from data.utils import *
 
 
-class TestUtils(unittest.TestCase):
+class UtilsTest(unittest.TestCase):
 
     def test_to_timestamp(self):
         self.assertEqual(to_timestamp("2018-09-16T00:20:58Z"), 1537057258)

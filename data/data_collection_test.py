@@ -16,7 +16,7 @@ import unittest
 from data.data_collection import *
 
 
-class TestDataCollection(unittest.TestCase):
+class DataCollectionTest(unittest.TestCase):
 
     def test_set_page(self):
         data_collector = DataCollector('mock',

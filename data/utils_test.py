@@ -32,6 +32,9 @@ class UtilsTest(unittest.TestCase):
 
     @httpretty.activate
     def test_requests_retries(self):
+        """
+        Test the retry mechanism by resending requests to the mockapi 5 times.
+        """
         httpretty.register_uri(
             httpretty.GET,
             "https://mockapi/status/500",
@@ -57,6 +60,9 @@ class UtilsTest(unittest.TestCase):
 
     @httpretty.activate
     def test_send_request(self):
+        """
+        Test the logic of send_request() function.
+        """
         httpretty.register_uri(
             httpretty.GET,
             "https://mockapi/request",
@@ -69,6 +75,9 @@ class UtilsTest(unittest.TestCase):
 
     @httpretty.activate
     def test_send_request_all_page(self):
+        """
+        Test the logic of send_request_all_page() function.
+        """
         httpretty.register_uri(
             httpretty.GET,
             "https://mockapi/request/page/1",
@@ -98,6 +107,9 @@ class UtilsTest(unittest.TestCase):
 
     @httpretty.activate
     def test_get_repository_by_page(self):
+        """
+        Test the logic of get_repository_by_page() function.
+        """
         httpretty.register_uri(
             httpretty.GET,
             "https://mockapi/users/google/page/1",
@@ -120,6 +132,9 @@ class UtilsTest(unittest.TestCase):
 
     @httpretty.activate
     def test_get_all_repositories(self):
+        """
+        Test the logic of get_all_repositories() function.
+        """
         httpretty.register_uri(
             httpretty.GET,
             "https://mockapi/users/google/page/1",
@@ -157,6 +172,9 @@ class UtilsTest(unittest.TestCase):
 
     @httpretty.activate
     def test_get_pull_request_by_page(self):
+        """
+        Test the logic of get_pull_request_by_page() function.
+        """
         httpretty.register_uri(
             httpretty.GET,
             "https://mockapi/repos/google/clusterfuzz/pulls",
@@ -196,6 +214,9 @@ class UtilsTest(unittest.TestCase):
 
     @httpretty.activate
     def test_get_all_pull_requests(self):
+        """
+        Test the logic of get_all_pull_requests() function.
+        """
         httpretty.register_uri(
             httpretty.GET,
             "https://mockapi/repos/google/clusterfuzz/pulls/page/1",

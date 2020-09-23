@@ -125,6 +125,10 @@ class FileLevelTransformationTest(unittest.TestCase):
                                  'num issue comments': 5,
                                  'approved reviewers': ['kj10bc', '19uvba']}}
         self.assertEqual(str(dict(file_data_dict)), str(expected_results))
+        self.assertEqual(file_data_dict["file1"].repo_name, mock_repo_name)
+        self.assertEqual(file_data_dict["file2"].repo_name, mock_repo_name)
+        self.assertEqual(file_data_dict["file1"].file_name, "file1")
+        self.assertEqual(file_data_dict["file2"].file_name, "file2")
 
     def test_count_check_run_status(self):
         """

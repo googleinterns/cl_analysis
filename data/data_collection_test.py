@@ -17,8 +17,14 @@ from data.data_collection import *
 
 
 class DataCollectionTest(unittest.TestCase):
-
+    """
+    Class that tests the functions in the data_collection.py.
+    """
     def test_set_page(self):
+        """
+        Test the set_page() function on edge cases where the input page is less
+        than one.
+        """
         data_collector = DataCollector('mock',
                                        '2000-01-01T00:00:00Z',
                                        '2010-01-01T00:00:00Z')
@@ -29,6 +35,9 @@ class DataCollectionTest(unittest.TestCase):
             data_collector.set_page(-100)
 
     def test_get_pull_request_review_time(self):
+        """
+        Test the logic of computing the pull request review time.
+        """
         mock_pull_request_info = {
             'created_at': '2018-09-16T00:20:58Z',
             'closed_at': '2020-05-18T05:21:24Z'
@@ -42,6 +51,10 @@ class DataCollectionTest(unittest.TestCase):
         self.assertEqual(pull_request_review_time, 1589779284-1537057258)
 
     def test_get_reverted_pull_request_info(self):
+        """
+        Test the logic of computing reverted pull request number and
+        the pull request revert time.
+        """
         mock_pull_request_info = {
             'number': 2058,
             'created_at': '2020-05-18T05:21:24Z',
@@ -71,6 +84,9 @@ class DataCollectionTest(unittest.TestCase):
         self.assertEqual(pull_request_revert_time, 1589779284-1537057258)
 
     def test_get_review_comments_body(self):
+        """
+        Test the logic of getting file review comments message.
+        """
         mock_review_comments = [{'path':'file1',
                                  'comment':'This file looks good to me'},
                                 {'path':'file2',
@@ -83,6 +99,9 @@ class DataCollectionTest(unittest.TestCase):
         self.assertEqual(results, expected_results)
 
     def test_get_issue_comments_body(self):
+        """
+        Test the logic of getting the issue comments message.
+        """
         mock_issue_comments = [{'body': 'This CL could break'},
                                {'body': 'Please add documentations'}]
         results = []
@@ -92,6 +111,10 @@ class DataCollectionTest(unittest.TestCase):
         self.assertEqual(results, expected_results)
 
     def test_get_approved_reviewers(self):
+        """
+        Test the logic of getting the approved reviewers usernames from
+        a list of reviewers.
+        """
         mock_reviews = [{'state': 'APPROVED',
                          'user': {
                              'login': 'oitgnq'
@@ -116,6 +139,9 @@ class DataCollectionTest(unittest.TestCase):
         self.assertEqual(results, expected_results)
 
     def test_get_file_versions(self):
+        """
+        Test the logic of getting the number of file versions in a pull request.
+        """
         mock_commits = [{'sha': '7c0184c31s',
                          'files': [{'filename': 'file1'}]
                         },
@@ -142,6 +168,10 @@ class DataCollectionTest(unittest.TestCase):
         self.assertEqual(results, expected_results)
 
     def test_get_check_runs(self):
+        """
+        Test the logic of computing check run results from the raw check run
+        history.
+        """
         failed_status = {'failure', 'cancelled', 'timed_out', 'action_required'}
         mock_check_run_results = [{},
                                   {'total_count': 5,
@@ -190,6 +220,10 @@ class DataCollectionTest(unittest.TestCase):
         self.assertEqual(results, expected_results)
 
     def test_get_file_changes(self):
+        """
+        Test the logic of computing the line of additions, deletions and
+        changes of each file in the pull request.
+        """
         mock_file_changes = [{'sha': '8vc192e',
                               'filename': 'file1',
                               'additions': 10,

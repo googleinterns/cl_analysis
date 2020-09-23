@@ -20,8 +20,13 @@ from data.utils import *
 
 
 class UtilsTest(unittest.TestCase):
-
+    """
+    Class that tests the functions in the utils.py.
+    """
     def test_to_timestamp(self):
+        """
+        Test the to_timestamp() function.
+        """
         self.assertEqual(to_timestamp("2018-09-16T00:20:58Z"), 1537057258)
         self.assertEqual(to_timestamp("2020-05-18T05:21:24Z"), 1589779284)
 

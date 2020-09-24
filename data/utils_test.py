@@ -13,9 +13,11 @@
 # limitations under the License.
 
 import unittest
+import mock
 import httpretty
 import json
 from requests import Session, exceptions
+import data.utils
 from data.utils import *
 
 
@@ -39,8 +41,8 @@ class UtilsTest(unittest.TestCase):
             httpretty.GET,
             "https://mockapi/status/500",
             responses=[httpretty.Response(
-                    body='{}',
-                    status=500)
+                body='{}',
+                status=500)
             ]
         )
         session = Session()
@@ -78,31 +80,15 @@ class UtilsTest(unittest.TestCase):
         """
         Test the logic of send_request_all_page() function.
         """
-        httpretty.register_uri(
-            httpretty.GET,
-            "https://mockapi/request/page/1",
-            body=json.dumps([{'key': 'value1'}])
-        )
-        httpretty.register_uri(
-            httpretty.GET,
-            "https://mockapi/request/page/2",
-            body=json.dumps([{'key': 'value2'}])
-        )
-        httpretty.register_uri(
-            httpretty.GET,
-            "https://mockapi/request/page/3",
-            body=json.dumps([])
-        )
-        results = []
-        for page in range(1,5):
-            json_response = send_request(
-                "https://mockapi/request/page/" + str(page))
-            if not json_response:
-                break
-            results.extend(json_response)
+        data.utils.send_request = \
+            mock.Mock(
+                side_effect=[[{'key': 'value1'}, {'key': 'value3'}],
+                             [{'key': 'value2'}], []])
+        results = send_request_all_pages('mock')
 
-        expected_results = [{'key': 'value1'}, {'key': 'value2'}]
-        self.assertEqual(len(results), 2)
+        expected_results = \
+            [{'key': 'value1'}, {'key': 'value3'}, {'key': 'value2'}]
+        self.assertEqual(len(results), 3)
         self.assertEqual(results, expected_results)
 
     @httpretty.activate
@@ -110,22 +96,10 @@ class UtilsTest(unittest.TestCase):
         """
         Test the logic of get_repository_by_page() function.
         """
-        httpretty.register_uri(
-            httpretty.GET,
-            "https://mockapi/users/google/page/1",
-            body=json.dumps([{'full_name': 'google/jax'},
-                            {'full_name': 'google/blockly'}])
-            )
-
-        results = []
-        response = requests.get(
-            "https://mockapi/users/google/page/1")
-        self.assertEqual(response.status_code, 200)
-        json_response = response.json()
-        for repo_info in json_response:
-            repo_name = repo_info['full_name']
-            results.append(repo_name)
-
+        data.utils.send_request = \
+            mock.Mock(return_value=[{'full_name': 'google/jax'},
+                                     {'full_name': 'google/blockly'}])
+        results = get_repositories_by_page(1, 'mock')
         expected_results = ['google/jax', 'google/blockly']
         self.assertEqual(results, expected_results)
         self.assertEqual(len(results), 2)
@@ -135,35 +109,11 @@ class UtilsTest(unittest.TestCase):
         """
         Test the logic of get_all_repositories() function.
         """
-        httpretty.register_uri(
-            httpretty.GET,
-            "https://mockapi/users/google/page/1",
-            body=json.dumps([{'full_name': 'google/jax'},
-                             {'full_name': 'google/blockly'}])
-        )
+        data.utils.get_repositories_by_page = \
+            mock.Mock(side_effect=[['google/jax','google/blockly'],
+                                   ['google/clusterfuzz','google/automl'], []])
 
-        httpretty.register_uri(
-            httpretty.GET,
-            "https://mockapi/users/google/page/2",
-            body=json.dumps([{'full_name': 'google/clusterfuzz'},
-                             {'full_name': 'google/automl'}])
-        )
-
-        httpretty.register_uri(
-            httpretty.GET,
-            "https://mockapi/users/google/page/3",
-            body=json.dumps([])
-        )
-
-        results = []
-        for page in range(1, 10):
-            json_response = send_request(
-                "https://mockapi/users/google/page/" + str(page))
-            if not json_response:
-                break
-            for repo_info in json_response:
-                repo_name = repo_info['full_name']
-                results.append(repo_name)
+        results = get_all_repositories('mock')
 
         expected_results = ['google/jax', 'google/blockly',
                             'google/clusterfuzz', 'google/automl']
@@ -175,41 +125,32 @@ class UtilsTest(unittest.TestCase):
         """
         Test the logic of get_pull_request_by_page() function.
         """
-        httpretty.register_uri(
-            httpretty.GET,
-            "https://mockapi/repos/google/clusterfuzz/pulls",
-            body=json.dumps([{'number': 2683,
-                              'closed_at': '2020-01-02T00:28:37Z',
-                              'merged_at': '2020-01-02T00:29:54Z'},
-                             {'number': 3012,
-                              'closed_at': None,
-                              'merged_at': None},
-                             {'number': 2974,
-                              'closed_at': '2020-07-02T00:28:37Z',
-                              'merged_at': None},
-                             {'number': 1525,
-                              'closed_at': '2020-06-03T14:28:37Z',
-                              'merged_at': '2020-06-03T15:29:54Z'}
-                             ])
-        )
-
-        json_response = send_request(
-            "https://mockapi/repos/google/clusterfuzz/pulls")
-        results = []
+        data.utils.send_request = \
+            mock.Mock(return_value=[{'number': 2683,
+                                     'closed_at': '2020-01-02T00:28:37Z',
+                                     'merged_at': '2020-01-02T00:29:54Z'},
+                                    {'number': 1049,
+                                     'closed_at': '2020-05-02T00:28:37Z',
+                                     'merged_at': '2020-05-02T00:29:54Z'},
+                                    {'number': 3012,
+                                     'closed_at': None,
+                                     'merged_at': None},
+                                    {'number': 2974,
+                                     'closed_at': '2020-07-02T00:28:37Z',
+                                     'merged_at': None},
+                                    {'number': 1525,
+                                     'closed_at': '2020-06-03T14:28:37Z',
+                                     'merged_at': '2020-06-03T15:29:54Z'}
+                                    ])
         start_date = "2020-05-01T00:00:00Z"
         end_date = "2020-08-01T00:00:00Z"
-        for pull_request_info in json_response:
-            closed_time = pull_request_info['closed_at']
-            merged_time = pull_request_info['merged_at']
-            if not merged_time:
-                continue
-            if to_timestamp(start_date) <= to_timestamp(closed_time) \
-                    <= to_timestamp(end_date):
-                results.append(pull_request_info)
-
-        expected_results = [{'number': 1525,
-                              'closed_at': '2020-06-03T14:28:37Z',
-                              'merged_at': '2020-06-03T15:29:54Z'}]
+        results = get_pull_requests_by_page(1, 'mock', start_date, end_date)
+        expected_results = [{'number': 1049,
+                             'closed_at': '2020-05-02T00:28:37Z',
+                             'merged_at': '2020-05-02T00:29:54Z'},
+                            {'number': 1525,
+                             'closed_at': '2020-06-03T14:28:37Z',
+                             'merged_at': '2020-06-03T15:29:54Z'}]
         self.assertEqual(results, expected_results)
 
     @httpretty.activate
@@ -217,66 +158,22 @@ class UtilsTest(unittest.TestCase):
         """
         Test the logic of get_all_pull_requests() function.
         """
-        httpretty.register_uri(
-            httpretty.GET,
-            "https://mockapi/repos/google/clusterfuzz/pulls/page/1",
-            body=json.dumps([{'number': 2683,
-                              'closed_at': '2020-01-02T00:28:37Z',
-                              'merged_at': '2020-01-02T00:29:54Z'},
-                             {'number': 3012,
-                              'closed_at': None,
-                              'merged_at': None},
-                             {'number': 2974,
-                              'closed_at': '2020-07-02T00:28:37Z',
-                              'merged_at': None},
-                             {'number': 1525,
-                              'closed_at': '2020-06-03T14:28:37Z',
-                              'merged_at': '2020-06-03T15:29:54Z'}
-                             ])
-        )
-
-        httpretty.register_uri(
-            httpretty.GET,
-            "https://mockapi/repos/google/clusterfuzz/pulls/page/2",
-            body=json.dumps([{'number': 2585,
-                              'closed_at': '2020-05-18T00:28:37Z',
-                              'merged_at': '2020-05-18T00:29:54Z'},
-                             {'number': 1065,
-                              'closed_at': None,
-                              'merged_at': None},
-                             {'number': 3298,
-                              'closed_at': '2020-07-28T00:28:37Z',
-                              'merged_at': None},
-                             {'number': 632,
-                              'closed_at': '2020-07-03T14:28:37Z',
-                              'merged_at': '2020-07-03T15:29:54Z'}
-                             ])
-        )
-
-        httpretty.register_uri(
-            httpretty.GET,
-            "https://mockapi/repos/google/clusterfuzz/pulls/page/3",
-            body=json.dumps([])
-        )
-
-        results = []
+        data.utils.get_pull_requests_by_page = \
+            mock.Mock(side_effect=[[{'number': 1525,
+                                     'closed_at': '2020-06-03T14:28:37Z',
+                                     'merged_at': '2020-06-03T15:29:54Z'},
+                                    {'number': 2585,
+                                     'closed_at': '2020-05-18T00:28:37Z',
+                                     'merged_at': '2020-05-18T00:29:54Z'}],
+                                   [{'number': 632,
+                                     'closed_at': '2020-07-03T14:28:37Z',
+                                     'merged_at': '2020-07-03T15:29:54Z'}],
+                                   [],
+                                   None])
         start_date = "2020-05-01T00:00:00Z"
         end_date = "2020-08-01T00:00:00Z"
-        for page in range(1, 5):
-            json_response = send_request(
-                "https://mockapi/repos/google/clusterfuzz/pulls/page/" +
-                str(page))
-            if not json_response:
-                break
-            for pull_request_info in json_response:
-                closed_time = pull_request_info['closed_at']
-                merged_time = pull_request_info['merged_at']
-                if not merged_time:
-                    continue
-                if to_timestamp(start_date) <= to_timestamp(closed_time) \
-                        <= to_timestamp(end_date):
-                    results.append(pull_request_info)
-
+        results = get_all_pull_requests('mock', start_date, end_date)
+        print(results)
         expected_results = [{'number': 1525,
                              'closed_at': '2020-06-03T14:28:37Z',
                              'merged_at': '2020-06-03T15:29:54Z'},

@@ -24,7 +24,9 @@ import logging
 def send_request(url: str,
                  params: dict = None,
                  headers: dict = None,
-                 auth: Tuple[str, str] = None) -> Union[List[dict], dict, None]:
+                 auth: Tuple[str, str] = None,
+                 max_retries: int = 100
+    ) -> Union[List[dict], dict, None]:
     """Performs HTTP GET request with url, parameters, and headers.
 
     Args:
@@ -42,7 +44,8 @@ def send_request(url: str,
                             datefmt='%Y-%m-%d:%H:%M:%S', level=logging.INFO)
 
         session = requests.Session()
-        retry = Retry(total=100, connect=100, backoff_factor=0.01,
+        retry = Retry(total=max_retries, connect=max_retries,
+                      backoff_factor=0.01,
                       status_forcelist=[429, 500, 502, 503, 504])
         adapter = HTTPAdapter(max_retries=retry)
         session.mount('http://', adapter)

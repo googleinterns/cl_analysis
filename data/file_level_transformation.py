@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import argparse
+import os
 from collections import defaultdict
 import pandas as pd
 from typing import List, Tuple
@@ -69,8 +70,9 @@ class DataTransformer:
         Args:
             file: The file path of pull request level CSV file.
         """
-
-        self._pr_level_data = pd.read_csv(file)
+        self._pr_level_data = pd.DataFrame()
+        if os.path.exists(file):
+            self._pr_level_data = pd.read_csv(file)
         self._pr_related_columns = PULL_REQUEST_RELATED_COLUMNS
         self._file_related_columns = FILE_RELATED_COLUMNS
         self._file_level_data = []

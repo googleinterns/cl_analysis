@@ -366,7 +366,7 @@ class DataCollector:
             A list of strs. Each str stands for the final check run status.
             The status can be 'none', 'passed', 'failed'.
         """
-        failed_status = {'failure, cancelled, timed_out, action_required'}
+        failed_status = {'failure', 'cancelled', 'timed_out', 'action_required'}
         check_run_results = []
         for commit in commits:
             commit_ref = commit['sha']

@@ -72,7 +72,7 @@ class DataAggregator:
         self._pr_related_columns = PULL_REQUEST_RELATED_COLUMNS
         self._file_related_columns = FILE_RELATED_COLUMNS
         self._file_level_data = pd.DataFrame()
-        if not file_level_data:
+        if not file_level_data.empty:
             self._file_level_data = \
                 file_level_data[file_level_data['file name'].notna()]
 

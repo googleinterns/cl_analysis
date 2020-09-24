@@ -21,17 +21,19 @@ class FileLevelAggregationTest(unittest.TestCase):
     """
     Class that tests the functions in the file_level_aggregation.py.
     """
+    def setUp(self):
+        """
+        Set up the data aggregator object.
+        """
+        self.data_aggregator = DataAggregator(pd.DataFrame())
+
     def test_flatten_lst(self):
         """
         Test the flatten_lst() function on the edge case where the str
         representation of the list can be empty list.
         """
         mock_lst = ["[1,2,3]", "[]", "[4,5]"]
-        flattened_lst = []
-        for lst in mock_lst:
-            if not pd.isna(lst):
-                for e in eval(lst):
-                    flattened_lst.append(e)
+        flattened_lst = self.data_aggregator.flatten_lst(mock_lst)
         expected_results = [1, 2, 3, 4, 5]
         self.assertEqual(flattened_lst, expected_results)
 
@@ -41,10 +43,7 @@ class FileLevelAggregationTest(unittest.TestCase):
         in the input list.
         """
         mock_lst = [1, 2, None, np.nan, 5]
-        results = []
-        for e in mock_lst:
-            if not pd.isna(e):
-                results.append(e)
+        results = self.data_aggregator.remove_nan(mock_lst)
         expected_results = [1, 2, 5]
         self.assertEqual(results, expected_results)
 

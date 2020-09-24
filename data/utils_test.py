@@ -173,7 +173,6 @@ class UtilsTest(unittest.TestCase):
         start_date = "2020-05-01T00:00:00Z"
         end_date = "2020-08-01T00:00:00Z"
         results = get_all_pull_requests('mock', start_date, end_date)
-        print(results)
         expected_results = [{'number': 1525,
                              'closed_at': '2020-06-03T14:28:37Z',
                              'merged_at': '2020-06-03T15:29:54Z'},

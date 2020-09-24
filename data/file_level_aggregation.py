@@ -71,8 +71,10 @@ class DataAggregator:
         """
         self._pr_related_columns = PULL_REQUEST_RELATED_COLUMNS
         self._file_related_columns = FILE_RELATED_COLUMNS
-        self._file_level_data = \
-            file_level_data[file_level_data['file name'].notna()]
+        self._file_level_data = pd.DataFrame()
+        if not file_level_data:
+            self._file_level_data = \
+                file_level_data[file_level_data['file name'].notna()]
 
     def aggregate(self, date: str, time_range: int = 30
     ) -> Union[pd.DataFrame, None]:

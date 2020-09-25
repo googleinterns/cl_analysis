@@ -14,6 +14,7 @@
 
 import numpy as np
 from model.load_data import *
+from sklearn.preprocessing import StandardScaler
 
 
 def expand_dict_to_lst(data_dict):
@@ -95,6 +96,20 @@ def true_false_split(train_data_size, labels):
     return true_indices, false_indices
 
 
+def get_downsampled_data(data, labels, downsampled_indices,
+                         true_indices, false_indices):
+    sample_indices = np.concatenate(
+        [false_indices[downsampled_indices], true_indices])
+    sorted_sample_indices = np.array(sorted(sample_indices))
+    train_X = data[sorted_sample_indices]
+    train_y = labels[sorted_sample_indices]
+    return train_X, train_y
 
 
-
+def get_scaled_data(train_X, test_X):
+    scaler = StandardScaler()
+    train_features = scaler.fit_transform(train_X)
+    test_features = scaler.transform(test_X)
+    train_X = np.clip(train_features, -5, 5)
+    test_X = np.clip(test_features, -5, 5)
+    return train_X, test_X

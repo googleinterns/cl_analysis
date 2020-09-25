@@ -16,7 +16,6 @@ import argparse
 from model.utils import *
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import accuracy_score, precision_score, recall_score, \
     roc_curve, auc
 
@@ -28,26 +27,18 @@ def main(arguments):
         print("Downsampling")
         true_indices, false_indices = true_false_split(train_data_size, labels)
         downsampled_indices = np.random.choice(len(false_indices), size=2000)
-        sample_indices = np.concatenate(
-            [false_indices[downsampled_indices], true_indices])
-        sorted_sample_indices = np.array(sorted(sample_indices))
-        train_X = data[sorted_sample_indices]
-        test_X = data[train_data_size:]
-        train_y = labels[sorted_sample_indices]
-        test_y = labels[train_data_size:]
+        train_X, train_y = get_downsampled_data(
+            data, labels, downsampled_indices, true_indices, false_indices)
     else:
         train_X = data[:train_data_size]
-        test_X = data[train_data_size:]
         train_y = labels[:train_data_size]
-        test_y = labels[train_data_size:]
+
+    test_X = data[train_data_size:]
+    test_y = labels[train_data_size:]
 
     if arguments.standardization:
         print("Standardizing")
-        scaler = StandardScaler()
-        train_features = scaler.fit_transform(train_X)
-        test_features = scaler.transform(test_X)
-        train_X = np.clip(train_features, -5, 5)
-        test_X = np.clip(test_features, -5, 5)
+        train_X, test_X = get_scaled_data(train_X, test_X)
 
     pos_weight = arguments.weight
     print("Positive weight", pos_weight)

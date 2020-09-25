@@ -12,18 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pandas as pd
-import numpy as np
-from collections import defaultdict
-import os
-from model.load_data import *
-
-
-def expand_dict_to_lst(data_dict):
-    data_list = []
-    for repo in data_dict:
-        data_list += data_dict[repo]
-    return data_list
+from model.utils import *
 
 
 def aggregate_file_data(data_arr, file_columns):

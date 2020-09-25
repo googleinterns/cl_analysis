@@ -54,8 +54,6 @@ def get_top_k_results(sorted_data):
     return results
 
 
-
-
 def main():
     data_loader = DataLoader(REPOS)
     pr_columns, file_columns, data_dict = data_loader.load_data_from_txt()

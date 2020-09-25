@@ -67,12 +67,8 @@ REPOS = ['google/oss-fuzz', 'google/iree', 'google/clusterfuzz',
 # The most significant file level features.
 SIGNIFICANT_FILE_FEATURES = ['reverted pull request percentage',
                              'num issue comments avg',
-                             'num review comments avg','pull request id count',
-                             'num line changes total',
-                             'files changes total changes',
-                             'files changes avg changes', 'author count']
+                             'num review comments avg']
 
 # The most significant pull request level features.
 SIGNIFICANT_PR_FEATURES = ['num issue comments', 'num approved reviewers',
                            'num files', 'num new files','num reverted files']
-

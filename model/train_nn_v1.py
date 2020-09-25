@@ -90,7 +90,8 @@ def main(arguments):
         batch_size=BATCH_SIZE,
         epochs=EPOCHS,
         callbacks=[early_stopping],
-        validation_data=(test_data_tensor, test_labels_tensor))
+        validation_data=(test_data_tensor, test_labels_tensor),
+        class_weight={0 : 1, 1: pos_weight})
 
     preds = model(test_data_tensor)
     preds = tf.reshape(preds, (len(test_data_tensor),)).numpy()

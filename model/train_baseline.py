@@ -21,7 +21,8 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, \
 
 
 def main(arguments):
-    data, labels = load_data(arguments.all)
+    _, pr_data, file_data, labels = load_data(arguments.all)
+    data = np.concatenate([pr_data, file_data], axis=1)
     train_data_size = int(len(data) * 0.8)
     if arguments.downsample:
         print("Downsampling")

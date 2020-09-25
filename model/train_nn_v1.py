@@ -16,11 +16,6 @@ import argparse
 from model.utils import *
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.layers import Dense, Flatten, Dropout, MaxPool1D, Conv1D
-from tensorflow.keras import Model
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, precision_score, recall_score, \
-    roc_curve, auc
 
 
 def make_model(train_features, metrics, output_bias=None):
@@ -43,7 +38,8 @@ def make_model(train_features, metrics, output_bias=None):
 
 
 def main(arguments):
-    data, labels = load_data(arguments.all)
+    _, pr_data, file_data, labels = load_data(arguments.all)
+    data = np.concatenate([pr_data, file_data], axis=1)
     train_data_size = int(len(data) * 0.8)
     if arguments.downsample:
         print("Downsampling")

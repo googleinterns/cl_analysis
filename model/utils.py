@@ -78,8 +78,7 @@ def load_data(all_features):
     aggregated_file_data = aggregate_file_data(
         data_arr, file_features_indices)
     file_data = np.array(aggregated_file_data)
-    data = np.concatenate([pr_data, file_data],axis=1)
-    return data, labels
+    return data_arr, pr_data, file_data, labels
 
 
 def true_false_split(train_data_size, labels):

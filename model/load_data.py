@@ -21,24 +21,57 @@ from model.constants import *
 
 
 class CLData:
+    """Class that holds a piece of datum of a CL.
+
+    This class holds the pull request level features, file level features,
+    and the lable indicating whether the CL is reverted.
+
+    Attributes:
+        pr_level_features: A list of pull request level features.
+        file_level_features: A dict of file level features.
+        reverted: A boolean variable indicating the CL reversion.
+    """
     def __init__(self):
+        """
+        Init the CL data.
+        """
         self.pr_level_features = None
         self.file_level_features = {}
         self.reverted = False
 
 
 class DataLoader:
+    """
+    This class helps load the whole dataset either from the local extracted
+    feature csv file or from the local saved txt file.
+
+    Attributes:
+        repos: A list of repo names.
+        pr_columns: A list of pull request level feature names.
+        file_columns: A list of file level feature names.
+    """
     def __init__(self, repos):
+        """
+        Init DataLoader
+        Args:
+            repos: A list of repo names.
+        """
         self.repos = repos
-        self.pr_columns = PR_LEVEL_FEATURES + ['num new files', 'num files',
-                                               'num reverted files',
-                                               'has reverted files',
-                                               'reverted files percentage']
-        self.file_columns = FILE_LEVEL_FEATURES + \
-                            ['reverted pull request percentage']
+        self.pr_columns = COMMON_PR_LEVEL_FEATURES + EXTRA_PR_LEVEL_FEATURES
+        self.file_columns = COMMON_FILE_LEVEL_FEATURES + \
+            EXTRA_FILE_LEVEL_FEATURES
 
     @staticmethod
     def _count_check_run_passed(lst):
+        """
+        Count the total number of passed check runs.
+
+        Args:
+            lst: A list of 'passed', 'failed', 'none'
+
+        Returns:
+            A integer indicating the total number of passed check runs.
+        """
         if pd.isna(lst):
             return 0
         num_passed = 0
@@ -49,6 +82,15 @@ class DataLoader:
 
     @staticmethod
     def _count_check_run_failed(lst):
+        """
+        Count the total number of failed check runs.
+
+        Args:
+            lst: A list of 'passed', 'failed', 'none'
+
+        Returns:
+            A integer indicating the total number of failed check runs.
+        """
         if pd.isna(lst):
             return 0
         num_failed = 0
@@ -58,6 +100,15 @@ class DataLoader:
         return num_failed
 
     def _get_pr_level_signals(self, repo):
+        """
+        Load the pull request level signals for input repo.
+
+        Args:
+            repo: A str holds the repo to load from.
+
+        Returns:
+             A pandas dataframe holds pull request level signals.
+        """
         pr_level_signals = pd.read_csv(
             '../data/%s_pull_requests_signals.csv' % repo)
         pr_level_signals['check run passed'] = pr_level_signals[
@@ -68,12 +119,33 @@ class DataLoader:
 
     @staticmethod
     def _get_file_level_signals(repo):
+        """
+        Load the file level signals for input repo.
+
+        Args:
+            repo: A str holds the repo to load from.
+
+        Returns:
+            A pandas dataframe holds the file level signals of input repo
+            with null rows removed.
+        """
         file_level_signals = pd.read_csv(
             '../data/%s_file_level_signals.csv' % repo)
         return file_level_signals[file_level_signals['file name'].notna()]
 
     @staticmethod
     def _get_file_level_signals_dict(dates, repo):
+        """
+        Load the file level features given repo name and the date range.
+
+        Args:
+            dates: A list of dates.
+            repo: A str holds the repo name
+
+        Returns:
+            A dict holds the file level features of given repo. Keys are the
+            dates and values are the dataframes.
+        """
         file_level_signals_dict = defaultdict(pd.DataFrame)
         for date in dates:
             date_str = date.strftime(format="%Y_%m_%d")
@@ -83,6 +155,15 @@ class DataLoader:
 
     @staticmethod
     def get_dates(file_level_signals):
+        """
+        Compute the date range of given file level signals.
+
+        Args:
+            file_level_signals: A dataframe holds the file level signals.
+
+        Returns:
+            A list of dates.
+        """
         min_date = file_level_signals['pull request closed time'].min()
         max_date = file_level_signals['pull request closed time'].max()
         start_date = datetime.fromisoformat(min_date[:-1]) \
@@ -95,6 +176,15 @@ class DataLoader:
 
     @staticmethod
     def _get_file_names(files_changes):
+        """
+        Get the file names from the files changes list.
+
+        Args:
+            files_changes: A list of file changes.
+
+        Returns:
+            A list of file names.
+        """
         file_names = set()
         for t in eval(files_changes):
             file_name, _, _, _ = t
@@ -103,6 +193,16 @@ class DataLoader:
 
     @staticmethod
     def _get_num_reverted_file(file_names, file_level_signals):
+        """
+        Get the num of files that are involved in CL rollbacks.
+
+        Args:
+            file_names: A list of file names
+            file_level_signals: A dataframe of file level signals
+
+        Returns:
+            A integer of the num of files that are involved in CL rollbacks.
+        """
         num_reverted_file = 0
         for file_name in file_names:
             selected_df = file_level_signals[
@@ -115,13 +215,26 @@ class DataLoader:
 
     @staticmethod
     def _get_file_data(pr_id, file_names, file_level_signals, cl_data_dict):
+        """
+        Fill in the file level features of the cl_data_dict and compute the
+        number of old files
+
+        Args:
+            pr_id: A integer of pull request id.
+            file_names: A list of file names.
+            file_level_signals: A dataframe holds the file level signals.
+            cl_data_dict: A dict of cl_data to fill in.
+
+        Returns:
+            An integer indicating the number of old files.
+        """
         num_old_files = 0
         for i in range(len(file_level_signals)):
             file_signals = file_level_signals.iloc[i]
             file_name = file_signals['file name']
             if file_name in file_names:
                 file_data = []
-                for feature in FILE_LEVEL_FEATURES:
+                for feature in COMMON_FILE_LEVEL_FEATURES:
                     file_data.append(file_signals[feature])
                 reverted_cl_rate = \
                     file_signals['reverted pull request id count'] / \
@@ -133,8 +246,21 @@ class DataLoader:
 
     @staticmethod
     def _get_pr_data(pr_signals, num_files, num_new_files, num_reverted_file):
+        """
+        Get the pull request data.
+
+        Args:
+            pr_signals: A panda series of signals of one pull request.
+            num_files: An integer of number of files in pull request.
+            num_new_files: An integer of number of new files in pull request.
+            num_reverted_file: An integer of number of files that have been
+                involved in CL rollbacks before.
+
+        Returns:
+            A list of datum of one pull request.
+        """
         pr_data = []
-        for feature in PR_LEVEL_FEATURES:
+        for feature in COMMON_PR_LEVEL_FEATURES:
             pr_data.append(pr_signals[feature])
         pr_data.append(num_new_files)
         pr_data.append(num_files)
@@ -147,6 +273,17 @@ class DataLoader:
         return pr_data
 
     def _get_cl_data_dict(self, pr_level_signals, repo):
+        """
+        Compute the CL data dict.
+
+        Args:
+            pr_level_signals: A dataframe of pull request level signals.
+            repo: A str of the repo name.
+
+        Returns:
+            A dict holds the CL data. The keys are the CL ids and the values
+            are one CLData object.
+        """
         cl_data_dict = defaultdict(CLData)
         for index in range(len(pr_level_signals)):
 
@@ -182,6 +319,13 @@ class DataLoader:
         return cl_data_dict
 
     def load_data(self):
+        """
+        Load data from all repos.
+
+        Returns:
+            A dict holds the CL data of all repos. The keys are the repo names
+            and the values are the CL data.
+        """
         training_data_dict = defaultdict(list)
         for repo in self.repos:
             print("Adding %s" % repo)
@@ -200,6 +344,16 @@ class DataLoader:
         return training_data_dict
 
     def save_data_to_txt(self, training_data_dict):
+        """
+        Save the data of all repos to local txt files.
+
+        Args:
+            training_data_dict: A dict holds the CL data of all repos. The keys are the repo names
+                and the values are the CL data.
+
+        Returns:
+            None
+        """
         for repo in training_data_dict:
             repo_data = training_data_dict[repo]
             with open('../data/%s_data.txt' % repo, 'w') as file:
@@ -212,6 +366,15 @@ class DataLoader:
                     file.write('\n')
 
     def load_data_from_txt(self):
+        """
+        Load the data of all repos from the local txt files.
+
+        Returns:
+            load_pr_columns: A list of pull request level feature names.
+            load_file_columns: A list of file level feature names.
+            load_data_dict: A dict holds the CL data of all repos.
+                The keys are the repo names and the values are the CL data.
+        """
         load_data_dict = {}
         for repo in self.repos:
             with open('../data/%s_data.txt' % repo, 'r') as file:
@@ -226,6 +389,10 @@ class DataLoader:
 
 
 def main():
+    """
+    This main function initializes a DataLoader and load the data from local
+    features csv files and save the data of all repos to local txt files.
+    """
     data_loader = DataLoader(REPOS)
     training_data_dict = data_loader.load_data()
     data_loader.save_data_to_txt(training_data_dict)

@@ -12,43 +12,48 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# The file level features of the dataset.
-FILE_LEVEL_FEATURES = ['author count',
-                       'pull request id count',
-                       'pull request review time total',
-                       'pull request review time avg',
-                       'reverted pull request id count',
-                       'pull request revert time avg',
-                       'pull request revert time total',
-                       'num review comments total',
-                       'num review comments avg',
-                       'num issue comments total',
-                       'num issue comments avg',
-                       'num approved reviewers total',
-                       'num approved reviewers avg',
-                       'num commits total',
-                       'num commits avg',
-                       'num line changes total',
-                       'num line changes avg',
-                       'check run results passed avg',
-                       'check run results failed avg',
-                       'check run results passed count',
-                       'check run results failed count',
-                       'files changes avg additions',
-                       'files changes avg deletions',
-                       'files changes avg changes',
-                       'files changes total additions',
-                       'files changes total deletions',
-                       'files changes total changes',
-                       'review comments msg avg count']
+# The common file level features of the dataset.
+COMMON_FILE_LEVEL_FEATURES = ['author count',
+                              'pull request id count',
+                              'pull request review time total',
+                              'pull request review time avg',
+                              'reverted pull request id count',
+                              'pull request revert time avg',
+                              'pull request revert time total',
+                              'num review comments total',
+                              'num review comments avg',
+                              'num issue comments total',
+                              'num issue comments avg',
+                              'num approved reviewers total',
+                              'num approved reviewers avg',
+                              'num commits total', 'num commits avg',
+                              'num line changes total',
+                              'num line changes avg',
+                              'check run results passed avg',
+                              'check run results failed avg',
+                              'check run results passed count',
+                              'check run results failed count',
+                              'files changes avg additions',
+                              'files changes avg deletions',
+                              'files changes avg changes',
+                              'files changes total additions',
+                              'files changes total deletions',
+                              'files changes total changes',
+                              'review comments msg avg count']
 
-# The pull request level features of the dataset.
-PR_LEVEL_FEATURES = ['pull request review time',
-                     'num review comments',
-                     'num issue comments',
-                     'num approved reviewers',
-                     'num commits', 'num line changes',
-                     'check run passed', 'check run failed']
+# The common pull request level features of the dataset.
+COMMON_PR_LEVEL_FEATURES = ['pull request review time', 'num review comments',
+                            'num issue comments', 'num approved reviewers',
+                            'num commits', 'num line changes',
+                            'check run passed', 'check run failed']
+
+# Extra file level features generated during the data loading.
+EXTRA_FILE_LEVEL_FEATURES = ['reverted pull request percentage']
+
+# Extra pull request level features generated during the data loading.
+EXTRA_PR_LEVEL_FEATURES = ['num new files', 'num files',
+                           'num reverted files', 'has reverted files',
+                           'reverted files percentage']
 
 # The repo names of the dataset.
 REPOS = ['google/oss-fuzz', 'google/iree', 'google/clusterfuzz',

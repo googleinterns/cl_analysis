@@ -132,6 +132,21 @@ class DataLoader:
                 num_old_files += 1
         return num_old_files
 
+    @staticmethod
+    def _get_pr_data(pr_signals, num_files, num_new_files, num_reverted_file):
+        pr_data = []
+        for feature in PR_LEVEL_FEATURES:
+            pr_data.append(pr_signals[feature])
+        pr_data.append(num_new_files)
+        pr_data.append(num_files)
+        pr_data.append(num_reverted_file)
+        if num_reverted_file:
+            pr_data.append(1)
+        else:
+            pr_data.append(0)
+        pr_data.append(num_reverted_file / num_files)
+        return pr_data
+
     def _get_cl_data_dict(self, pr_level_signals, repo):
         cl_data_dict = defaultdict(CLData)
         for index in range(len(pr_level_signals)):
@@ -161,17 +176,8 @@ class DataLoader:
                                                 file_level_signals,
                                                 cl_data_dict)
             num_new_files = num_files - num_old_files
-            pr_data = []
-            for feature in PR_LEVEL_FEATURES:
-                pr_data.append(pr_signals[feature])
-            pr_data.append(num_new_files)
-            pr_data.append(num_files)
-            pr_data.append(num_reverted_file)
-            if num_reverted_file:
-                pr_data.append(1)
-            else:
-                pr_data.append(0)
-            pr_data.append(num_reverted_file / num_files)
+            pr_data = self._get_pr_data(
+                pr_signals, num_files, num_new_files, num_reverted_file)
             cl_data_dict[pr_id].pr_level_features = deepcopy(pr_data)
 
         return cl_data_dict

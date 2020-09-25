@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import pandas as pd
-import numpy as np
 from collections import defaultdict
 from datetime import datetime, timedelta
 from copy import deepcopy

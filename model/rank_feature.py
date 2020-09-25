@@ -47,6 +47,15 @@ def sort_by_ith_column(data, i, reverse=False):
         return data[sorted_indices]
 
 
+def get_top_k_results(sorted_data):
+    results = []
+    for k in [10, 20, 50, 100, 200]:
+        results.append("P@" + str(k) + ": " + str(sorted_data[:k][:, -1].sum()))
+    return results
+
+
+
+
 def main():
     data_loader = DataLoader(REPOS)
     pr_columns, file_columns, data_dict = data_loader.load_data_from_txt()
@@ -65,17 +74,11 @@ def main():
         print(columns[i])
         print("Rank by descending order: ")
         sorted_data = sort_by_ith_column(data, i, True)
-        descending_results = []
-        for k in [10, 20, 50, 100, 200]:
-            descending_results.\
-                append("P@" + str(k) + ": " + str(sorted_data[:k][:, -1].sum()))
+        descending_results = get_top_k_results(sorted_data)
         print("\t".join(descending_results))
         print("Rank by ascending order: ")
         sorted_data = sort_by_ith_column(data, i, False)
-        ascending_results = []
-        for k in [10, 20, 50, 100, 200]:
-            ascending_results.\
-                append("P@" + str(k) + ": " + str(sorted_data[:k][:, -1].sum()))
+        ascending_results = get_top_k_results(sorted_data)
         print("\t".join(ascending_results))
         print()
 

@@ -14,6 +14,7 @@
 
 import unittest
 from data.file_level_transformation import *
+from data.test_constants import *
 
 
 class FileLevelTransformationTest(unittest.TestCase):
@@ -22,29 +23,23 @@ class FileLevelTransformationTest(unittest.TestCase):
     """
     def setUp(self):
         self.data_transformer = DataTransformer("mock")
-        pr_column_names = {'col1': int, 'col2': str}
-        file_column_name = {'col3': eval}
-        mock_df = pd.DataFrame([["1", "a", "[3, 4]"], ["5", "b", "[]"]],
-                               columns=list(pr_column_names.keys())
-                                       + list(file_column_name.keys()))
+        mock_df = pd.DataFrame(MOCK_DATA,
+                               columns=list(PR_COLUMNS.keys())
+                               + list(FILE_COLUMNS.keys()))
         self.data_transformer._pr_level_data = mock_df
-        self.data_transformer._pr_related_columns = pr_column_names
-        self.data_transformer._file_related_columns = file_column_name
+        self.data_transformer._pr_related_columns = PR_COLUMNS
+        self.data_transformer._file_related_columns = FILE_COLUMNS
 
     def test_get_value_dict(self):
         """
         Test the logic of _get_value_dict() function.
         """
         df = self.data_transformer._pr_level_data
-        expected_pr_results = [{'col1': 1, 'col2': 'a'},
-                               {'col1': 5, 'col2': 'b'}]
-        expected_file_results = [{'col3': [3,4]},
-                                 {'col3': []}]
         for i in range(len(df)):
             pr_related_values, file_related_values = \
                 self.data_transformer._get_value_dict(df.iloc[i])
-            expected_pr_result = expected_pr_results[i]
-            expected_file_result = expected_file_results[i]
+            expected_pr_result = PR_RESULTS[i]
+            expected_file_result = FILE_RESULTS[i]
             self.assertEqual(pr_related_values, expected_pr_result)
             self.assertEqual(file_related_values, expected_file_result)
 
@@ -52,60 +47,23 @@ class FileLevelTransformationTest(unittest.TestCase):
         """
         Test the logic of transforming the file related signals.
         """
-        mock_file_versions = {'file1': 1, 'file2': 2}
-        mock_file_related_values = {'files changes': [('file1', 20, 10, 30),
-                                                      ('file2', 50, 100, 150)],
-                                    'review comments msg':
-                                        [('file1',
-                                          'This file looks good to me'),
-                                        ('file2',
-                                         'I wont approve this change'),
-                                        ('file2', 'Please change this back')]
-                                    }
         file_data_dict = defaultdict(FileData)
         self.data_transformer._transform_file_related_signals(
-            mock_file_related_values, mock_file_versions, file_data_dict)
-        expected_results = {'file1': {'file versions': 1,
-                                      'files changes': (20, 10, 30),
-                                      'review comments msg':
-                                          ['This file looks good to me']},
-                            'file2': {'file versions': 2,
-                                      'files changes': (50, 100, 150),
-                                      'review comments msg':
-                                          ['I wont approve this change',
-                                           'Please change this back']}}
-        self.assertEqual(str(dict(file_data_dict)), str(expected_results))
+            FILE_RELATED_VALUES, FILE_VERSIONS, file_data_dict)
+        self.assertEqual(str(dict(file_data_dict)), str(FILE_DATA_RESULTS))
 
     def test_transform_pr_related_signals(self):
         """
         Test the logic of transforming pull request related signals.
         """
-        self.data_transformer._pr_related_columns = {'num review comments': int,
-                                                     'num issue comments': int,
-                                                     'approved reviewers': eval}
+        self.data_transformer._pr_related_columns = PR_RELATED_COLUMNS
         file_data_dict = defaultdict(FileData)
-        mock_pr_related_values = {'num review comments': 10,
-                                  'num issue comments': 5,
-                                  'approved reviewers': ['kj10bc', '19uvba']}
-        mock_file_names = ['file1', 'file2']
-        mock_repo_name = 'google/jax'
-        mock_check_run_results = ['passed', 'failed', 'none', 'passed']
         self.data_transformer._transform_pr_related_signals(
-            mock_pr_related_values, mock_file_names, mock_repo_name,
-            mock_check_run_results, file_data_dict)
-        expected_results = {'file1':
-                                {'num review comments': 10,
-                                 'num issue comments': 5,
-                                 'approved reviewers': ['kj10bc', '19uvba'],
-                                 'check run results': (2, 1)},
-                            'file2':
-                                {'num review comments': 10,
-                                 'num issue comments': 5,
-                                 'approved reviewers': ['kj10bc', '19uvba'],
-                                 'check run results': (2, 1)}}
-        self.assertEqual(str(dict(file_data_dict)), str(expected_results))
-        self.assertEqual(file_data_dict["file1"].repo_name, mock_repo_name)
-        self.assertEqual(file_data_dict["file2"].repo_name, mock_repo_name)
+            PR_RELATED_VALUES, FILE_NAMES, REPO_NAME,
+            CHECK_RUNS_RESULTS, file_data_dict)
+        self.assertEqual(str(dict(file_data_dict)), str(PR_DATA_RESULTS))
+        self.assertEqual(file_data_dict["file1"].repo_name, REPO_NAME)
+        self.assertEqual(file_data_dict["file2"].repo_name, REPO_NAME)
         self.assertEqual(file_data_dict["file1"].file_name, "file1")
         self.assertEqual(file_data_dict["file2"].file_name, "file2")
 
@@ -113,12 +71,11 @@ class FileLevelTransformationTest(unittest.TestCase):
         """
         Test the logic of _count_check_run_status() function.
         """
-        mock_check_run_results = \
-            ['passed', 'failed', 'passed', 'passed', 'none']
+        mock_check_run_results = CHECK_RUNS_RESULTS
         num_passed, num_failed = \
             self.data_transformer._count_check_run_status(
                 mock_check_run_results)
-        self.assertEqual(num_passed, 3)
+        self.assertEqual(num_passed, 2)
         self.assertEqual(num_failed, 1)
 
 

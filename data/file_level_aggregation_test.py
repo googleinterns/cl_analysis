@@ -14,6 +14,7 @@
 
 import unittest
 from data.file_level_aggregation import *
+from data.test_constants import *
 import numpy as np
 
 
@@ -33,8 +34,7 @@ class FileLevelAggregationTest(unittest.TestCase):
         representation of the list can be empty list.
         """
         self.assertEqual(
-            self.data_aggregator.flatten_lst(["[1,2,3]", "[]", "[4,5]"]),
-            [1, 2, 3, 4, 5])
+            self.data_aggregator.flatten_lst(NESTED_LIST),[1, 2, 3, 4, 5])
 
     def test_remove_nan(self):
         """
@@ -42,14 +42,14 @@ class FileLevelAggregationTest(unittest.TestCase):
         in the input list.
         """
         self.assertEqual(
-            self.data_aggregator.remove_nan([1, 2, None, np.nan, 5]), [1, 2, 5])
+            self.data_aggregator.remove_nan(NESTED_LIST_WITH_NAN), [1, 2, 5])
 
     def test_date_calculation(self):
         """
         Test the date calculation logic.
         """
         previous_date = \
-            datetime.fromisoformat("2020-08-01T00:52:38") - timedelta(days=1)
+            datetime.fromisoformat(CURRENT_DATE) - timedelta(days=1)
         previous_date_str = previous_date.strftime("%Y-%m-%d")
         self.assertEqual(previous_date_str, "2020-07-31")
 
@@ -57,8 +57,8 @@ class FileLevelAggregationTest(unittest.TestCase):
         """
         Test the logic of generating a list of dates within the given range.
         """
-        start_date = datetime.fromisoformat("2020-07-28T00:00:00")
-        end_date = datetime.fromisoformat("2020-08-01T00:00:00")
+        start_date = datetime.fromisoformat(START_DATE)
+        end_date = datetime.fromisoformat(END_DATE)
         date_range = pd.date_range(start=start_date.strftime("%Y-%m-%d"),
                           end=end_date.strftime("%Y-%m-%d"))\
         .to_pydatetime().tolist()

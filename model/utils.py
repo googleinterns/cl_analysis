@@ -18,6 +18,15 @@ from sklearn.preprocessing import StandardScaler
 
 
 def expand_dict_to_lst(data_dict):
+    """
+    Aggregate the data of all repos
+
+    Args:
+        data_dict: A dict holds the data of all repos.
+
+    Returns:
+        A list of data.
+    """
     data_list = []
     for repo in data_dict:
         data_list += data_dict[repo]
@@ -25,12 +34,32 @@ def expand_dict_to_lst(data_dict):
 
 
 def p_at_k(preds, labels, k):
+    """
+    Compute the top K precision.
+
+    Args:
+        preds: A numpy array of predicted values.
+        labels: A numpy array of actual labels.
+        k: An integer indicating the P@K
+    """
     concatenated = np.concatenate([np.expand_dims(preds, axis=1),
                                    np.expand_dims(labels, axis=1)], axis=1)
     return concatenated[np.argsort(concatenated[:, 0])[::-1]][:k]
 
 
 def aggregate_file_data(data_arr, file_columns):
+    """
+    Aggregate the 3D file level features into 2D by taking the max, min, etc.
+
+    Args:
+        data_arr: A numpy array containing pull request level features,
+            file level features, and label. The second column is the file level
+            features.
+        file_columns: A list of file level feature columns.
+
+    Returns:
+        A 2D nested list.
+    """
     aggregated_file_data = []
     for lst in data_arr[:, 1]:
         if not lst:
@@ -55,6 +84,18 @@ def aggregate_file_data(data_arr, file_columns):
 
 
 def load_data(all_features):
+    """
+    Load the data of all repos.
+
+    Args:
+        all_features: A boolean indicating whether to load all feature.
+
+    Returns:
+        data_arr: A numpy array of the original loaded data.
+        pr_data: A numpy array of the pull request level features,
+        file_data: A numpy array of the aggregated file level features.
+        labels: A numpy array of labels.
+    """
     data_loader = DataLoader(REPOS)
     pr_columns, file_columns, data_dict = data_loader.load_data_from_txt()
     data_list = expand_dict_to_lst(data_dict)
@@ -82,6 +123,17 @@ def load_data(all_features):
 
 
 def true_false_split(train_data_size, labels):
+    """
+    Split the labels to true labels and false labels
+
+    Args:
+        train_data_size: An integer of training data size.
+        labels: A numpy array of labels.
+
+    Returns:
+        true_indices: A numpy array of indices of true labels.
+        false_indices: A numpy array of indices of false labels.
+    """
     true_indices = []
     false_indices = []
     for i in range(train_data_size):
@@ -97,6 +149,20 @@ def true_false_split(train_data_size, labels):
 
 def get_downsampled_data(data, labels, downsampled_indices,
                          true_indices, false_indices):
+    """
+    Downsample the dataset.
+
+    Args:
+        data: A numpy array of pull request level features
+            and file level features
+        labels: A numpy array of labels.
+        downsampled_indices: A numpy array of indices of false indices.
+        true_indices: A numpy array of indices of true labels.
+        false_indices: A numpy array of indices of false labels.
+
+    Returns:
+        The downsampled training input features and training labels.
+    """
     sample_indices = np.concatenate(
         [false_indices[downsampled_indices], true_indices])
     sorted_sample_indices = np.array(sorted(sample_indices))
@@ -106,6 +172,16 @@ def get_downsampled_data(data, labels, downsampled_indices,
 
 
 def get_scaled_data(train_X, test_X):
+    """
+    Get the standardized data.
+
+    Args:
+        train_X: A numpy array of training input features.
+        test_X: A numpy array of testing input features.
+
+    Returns:
+        Scaled training input features and testing input features.
+    """
     scaler = StandardScaler()
     train_features = scaler.fit_transform(train_X)
     test_features = scaler.transform(test_X)

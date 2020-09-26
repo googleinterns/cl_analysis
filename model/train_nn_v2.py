@@ -38,6 +38,16 @@ class CNNModel(Model):
 
 
 def flatten_3d_to_2d(raw_file_data):
+    """
+    Flatten the raw 3D file data to 2D.
+
+    Args:
+        raw_file_data: A 3D nested list.
+
+    Returns:
+        file_data_2d: A 2D nested list
+        lens: A list of integers recording the number of files in each CL.
+    """
     file_data_2d = []
     lens = []
     for lst in raw_file_data:
@@ -48,6 +58,16 @@ def flatten_3d_to_2d(raw_file_data):
 
 
 def expand_2d_to_3d(file_data_2d, lens):
+    """
+    Restore the 2D file data back to 3D.
+
+    Args:
+        file_data_2d: A 2D nested list
+        lens: A list of integers recording the number of files in each CL.
+
+    Returns:
+        A 3D nested list.
+    """
     restore_3d_file_data = []
     prefix_train = 0
     for l in lens:
@@ -58,6 +78,17 @@ def expand_2d_to_3d(file_data_2d, lens):
 
 
 def pad_zeros(file_data, max_len, file_columns):
+    """
+    Pad zeros for the CLs that have number of files less than max_len
+
+    Args:
+        file_data: A 3D nested list.
+        max_len: An integer of maximum number of files across all CLs.
+        file_columns: A list of file level feature names.
+
+    Returns:
+        A 3D nested list with zeros padded.
+    """
     padded_file_data = []
     for lst in file_data:
         lst_copy = deepcopy(lst)

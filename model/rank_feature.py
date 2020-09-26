@@ -16,6 +16,18 @@ from model.utils import *
 
 
 def aggregate_file_data(data_arr, file_columns):
+    """
+    Aggregate the 3D file level features into 2D by taking the max.
+
+    Args:
+        data_arr: A numpy array containing pull request level features,
+            file level features, and label. The second column is the file level
+            features.
+        file_columns: A list of file level feature columns.
+
+    Returns:
+        A 2D nested list.
+    """
     aggregated_file_data = []
     for lst in data_arr[:, 1]:
         if not lst:
@@ -29,6 +41,16 @@ def aggregate_file_data(data_arr, file_columns):
 
 
 def sort_by_ith_column(data, i, reverse=False):
+    """
+    Sort the data by ith column.
+
+    Args:
+        data: A 2D numpy array.
+        i: An integer of the index of the column.
+        reverse: A boolean indicating the order.
+    Returns:
+        A numpy array of sorted data.
+    """
     sorted_indices = np.argsort(data[:, i])
     if reverse:
         return data[sorted_indices[::-1]]
@@ -37,6 +59,15 @@ def sort_by_ith_column(data, i, reverse=False):
 
 
 def get_top_k_results(sorted_data):
+    """
+    Compute the top K precisions.
+
+    Args:
+        sorted_data: A numpy array of sorted data.
+
+    Returns:
+        A list of top K precisions.
+    """
     results = []
     for k in [10, 20, 50, 100, 200]:
         results.append("P@" + str(k) + ": " + str(sorted_data[:k][:, -1].sum()))

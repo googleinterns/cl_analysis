@@ -4,6 +4,9 @@
 
 This git repository is used for CL Analysis - Intern Project (Summer 2020).
 
+**Instructions to run:**
+
+[go/github-cl-risk-analysis-instructions](go/github-cl-risk-analysis-instructions)
 
 ## Source Code Headers
 

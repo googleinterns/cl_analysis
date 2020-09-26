@@ -32,27 +32,24 @@ class FileLevelAggregationTest(unittest.TestCase):
         Test the flatten_lst() function on the edge case where the str
         representation of the list can be empty list.
         """
-        mock_lst = ["[1,2,3]", "[]", "[4,5]"]
-        flattened_lst = self.data_aggregator.flatten_lst(mock_lst)
-        expected_results = [1, 2, 3, 4, 5]
-        self.assertEqual(flattened_lst, expected_results)
+        self.assertEqual(
+            self.data_aggregator.flatten_lst(["[1,2,3]", "[]", "[4,5]"]),
+            [1, 2, 3, 4, 5])
 
     def test_remove_nan(self):
         """
         Test the remove_nan() function on the cases where None and np.nan exist
         in the input list.
         """
-        mock_lst = [1, 2, None, np.nan, 5]
-        results = self.data_aggregator.remove_nan(mock_lst)
-        expected_results = [1, 2, 5]
-        self.assertEqual(results, expected_results)
+        self.assertEqual(
+            self.data_aggregator.remove_nan([1, 2, None, np.nan, 5]), [1, 2, 5])
 
     def test_date_calculation(self):
         """
         Test the date calculation logic.
         """
-        date_time = "2020-08-01T00:52:38"
-        previous_date = datetime.fromisoformat(date_time) - timedelta(days=1)
+        previous_date = \
+            datetime.fromisoformat("2020-08-01T00:52:38") - timedelta(days=1)
         previous_date_str = previous_date.strftime("%Y-%m-%d")
         self.assertEqual(previous_date_str, "2020-07-31")
 
